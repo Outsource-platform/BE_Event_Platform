@@ -32,7 +32,7 @@ public class RouteTable {
                         List.of("/api/auth/**", "/api/tenants/**", "/api/users/**"),
                         identityServiceUri),
                 new Route("catalog-service",
-                        List.of("/api/service-categories/**", "/api/vendor-profiles/**", "/api/tenant/vendor-profile"),
+                        List.of("/api/service-categories/**", "/api/banners/**", "/api/vendor-profiles/**", "/api/tenant/vendor-profile"),
                         catalogServiceUri),
                 new Route("event-service",
                         List.of("/api/events/**", "/api/tenant/events/**", "/api/tenant/crew-roles/**",

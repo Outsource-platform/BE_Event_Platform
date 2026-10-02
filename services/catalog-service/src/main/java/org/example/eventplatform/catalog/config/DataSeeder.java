@@ -2,7 +2,9 @@ package org.example.eventplatform.catalog.config;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.eventplatform.catalog.entity.Banner;
 import org.example.eventplatform.catalog.entity.ServiceCategory;
+import org.example.eventplatform.catalog.repository.BannerRepository;
 import org.example.eventplatform.catalog.repository.ServiceCategoryRepository;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
@@ -44,5 +46,25 @@ public class DataSeeder {
                 log.info("Seeded service category {}", seed.code());
             }
         });
+    }
+
+    /**
+     * Vài banner mẫu (chưa có ảnh, app tự vẽ nền màu) để slider trang chủ có nội dung
+     * ngay từ đầu. Chỉ seed khi bảng trống, SUPER_ADMIN sửa hoặc xóa thoải mái.
+     */
+    @Bean
+    public ApplicationRunner seedBanners(BannerRepository repository) {
+        return args -> {
+            if (repository.count() > 0) {
+                return;
+            }
+            repository.save(Banner.builder().title("Đặt đoàn biểu diễn cho mọi dịp")
+                    .subtitle("Xem giá, so sánh và gửi yêu cầu ngay trong app").sortOrder(1).active(true).build());
+            repository.save(Banner.builder().title("Lân Sư Rồng đón khai trương")
+                    .subtitle("Cầu may mắn, thu hút khách ngày mở cửa").sortOrder(2).active(true).build());
+            repository.save(Banner.builder().title("Trọn gói tiệc cưới & sự kiện")
+                    .subtitle("Ca nhạc, MC, âm thanh ánh sáng, trang trí").sortOrder(3).active(true).build());
+            log.info("Seeded sample banners");
+        };
     }
 }

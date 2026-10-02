@@ -156,7 +156,18 @@ public class PublicCatalogService {
                 .limit(FEATURED_LIMIT)
                 .toList();
 
+        List<HomeAppResponse.BannerBrief> banners = catalogServiceClient.listBanners().stream()
+                .map(b -> HomeAppResponse.BannerBrief.builder()
+                        .id(b.id())
+                        .title(b.title())
+                        .subtitle(b.subtitle())
+                        .imageUrl(b.imageUrl())
+                        .linkUrl(b.linkUrl())
+                        .build())
+                .toList();
+
         return HomeAppResponse.builder()
+                .banners(banners)
                 .categories(categories)
                 .discovers(discovers)
                 .featuredTroupes(featuredTroupes)

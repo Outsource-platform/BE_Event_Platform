@@ -56,6 +56,23 @@ public class CatalogServiceClient {
         }
     }
 
+    /** Banner trang chủ đang bật. Lỗi thì trả rỗng để home không vỡ. */
+    public List<BannerSummary> listBanners() {
+        try {
+            BannerSummary[] response = restClient.get()
+                    .uri("/api/internal/banners")
+                    .retrieve()
+                    .body(BannerSummary[].class);
+            return response == null ? List.of() : Arrays.asList(response);
+        } catch (Exception ex) {
+            log.error("Could not fetch banners", ex);
+            return List.of();
+        }
+    }
+
+    public record BannerSummary(Long id, String title, String subtitle, String imageUrl, String linkUrl) {
+    }
+
     public record ServiceCategorySummary(Long id, String code, String name, String description) {
     }
 

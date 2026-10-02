@@ -11,11 +11,17 @@ import java.util.List;
  */
 @Builder
 public record HomeAppResponse(
+        List<BannerBrief> banners,
         List<CategoryBrief> categories,
         List<ProvinceBrief> discovers,
         List<PublicTroupeResponse> featuredTroupes,
         List<PublicPackageResponse> featuredPackages
 ) {
+
+    /** Một banner trong slider đầu trang chủ. */
+    @Builder
+    public record BannerBrief(Long id, String title, String subtitle, String imageUrl, String linkUrl) {
+    }
 
     /** Loại hình dịch vụ + số đơn vị đang hoạt động thuộc loại đó. */
     @Builder
