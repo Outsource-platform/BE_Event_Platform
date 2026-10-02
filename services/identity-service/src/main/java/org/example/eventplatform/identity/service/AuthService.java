@@ -176,6 +176,7 @@ public class AuthService {
                 .commissionRate(user.getCommissionRate())
                 .category(user.getTenant() != null ? user.getTenant().getCategory() : null)
                 .province(user.getTenant() != null ? user.getTenant().getProvince() : null)
+                .ward(user.getTenant() != null ? user.getTenant().getWard() : null)
                 .primaryColorHex(user.getTenant() != null ? user.getTenant().getPrimaryColorHex() : null)
                 .accentColorHex(user.getTenant() != null ? user.getTenant().getAccentColorHex() : null)
                 .build();

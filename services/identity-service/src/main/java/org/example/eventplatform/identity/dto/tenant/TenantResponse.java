@@ -22,6 +22,7 @@ public class TenantResponse {
     private RegistrationStatus statusConfirm;
     private String category;
     private String province;
+    private String ward;
     private String primaryColorHex;
     private String accentColorHex;
 }

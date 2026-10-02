@@ -108,7 +108,7 @@ public class IdentityServiceClient {
     }
 
     public record PublicTenant(Long id, String name, String domain, String logo, String category,
-                               String province, String primaryColorHex, String accentColorHex) {
+                               String province, String ward, String primaryColorHex, String accentColorHex) {
     }
 
     public record UserContact(Long userId, Long tenantId, String username, String fullName, String email,

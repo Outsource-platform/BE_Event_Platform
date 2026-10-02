@@ -14,6 +14,7 @@ public record PublicTenantResponse(
         String logo,
         String category,
         String province,
+        String ward,
         String primaryColorHex,
         String accentColorHex
 ) {

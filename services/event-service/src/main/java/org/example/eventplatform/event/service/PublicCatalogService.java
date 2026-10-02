@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.example.eventplatform.event.client.CatalogServiceClient;
 import org.example.eventplatform.event.client.IdentityServiceClient;
 import org.example.eventplatform.event.dto.HomeAppResponse;
+import org.example.eventplatform.event.dto.PlaceResponse;
 import org.example.eventplatform.event.dto.PublicPackageResponse;
 import org.example.eventplatform.event.dto.PublicTroupeResponse;
 import org.example.eventplatform.event.entity.ShowPackage;
@@ -12,9 +13,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.text.Collator;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -34,13 +37,15 @@ public class PublicCatalogService {
     private final ShowPackageRepository showPackageRepository;
     private final IdentityServiceClient identityServiceClient;
     private final CatalogServiceClient catalogServiceClient;
+    private final PlaceCatalog placeCatalog;
 
     @Transactional(readOnly = true)
-    public List<PublicTroupeResponse> listTroupes(String category, String province) {
+    public List<PublicTroupeResponse> listTroupes(String category, String province, String ward) {
         Map<Long, List<ShowPackage>> packagesByTenant = activePackagesByTenant();
         return identityServiceClient.findPublicTenants().stream()
                 .filter(t -> category == null || category.isBlank() || category.equalsIgnoreCase(t.category()))
-                .filter(t -> province == null || province.isBlank() || province.equalsIgnoreCase(t.province()))
+                .filter(t -> sameArea(province, t.province()))
+                .filter(t -> sameArea(ward, t.ward()))
                 .map(tenant -> toTroupe(tenant, packagesByTenant.getOrDefault(tenant.id(), List.of()), false))
                 .toList();
     }
@@ -65,6 +70,41 @@ public class PublicCatalogService {
                 .filter(pkg -> tenants.containsKey(pkg.getTenantId()))
                 .map(pkg -> toPackage(pkg, tenants.get(pkg.getTenantId())))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<PlaceResponse.ProvinceView> listProvinces() {
+        return placeCatalog.provinces().stream()
+                .map(p -> new PlaceResponse.ProvinceView(p.code(), p.name(), p.fullName()))
+                .toList();
+    }
+
+    /** Phường/xã của tỉnh, nơi có đơn vị lên trước rồi mới tới theo thứ tự chữ cái. */
+    @Transactional(readOnly = true)
+    public List<PlaceResponse.WardView> listWards(String provinceName) {
+        PlaceCatalog.Province province = placeCatalog.findProvince(provinceName)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy tỉnh/thành này"));
+
+        Map<String, Long> troupesPerWard = identityServiceClient.findPublicTenants().stream()
+                .filter(t -> sameArea(province.name(), t.province()))
+                .filter(t -> t.ward() != null && !t.ward().isBlank())
+                .collect(Collectors.groupingBy(t -> PlaceCatalog.normalize(t.ward()), Collectors.counting()));
+
+        Collator collator = Collator.getInstance(Locale.forLanguageTag("vi"));
+        return province.wards().stream()
+                .map(w -> new PlaceResponse.WardView(
+                        w.code(), w.name(), troupesPerWard.getOrDefault(PlaceCatalog.normalize(w.name()), 0L).intValue()))
+                .sorted(Comparator.comparingInt(PlaceResponse.WardView::troupeCount).reversed()
+                        .thenComparing(PlaceResponse.WardView::name, collator))
+                .toList();
+    }
+
+    /** Trống nghĩa là không lọc; còn lại so khớp không phân biệt hoa thường và dấu. */
+    private boolean sameArea(String wanted, String actual) {
+        if (wanted == null || wanted.isBlank()) {
+            return true;
+        }
+        return PlaceCatalog.normalize(wanted).equals(PlaceCatalog.normalize(actual));
     }
 
     /** Gộp mọi thứ trang chủ cần vào một lần gọi. */
@@ -149,6 +189,7 @@ public class PublicCatalogService {
                 .logo(tenant.logo())
                 .category(tenant.category())
                 .province(tenant.province())
+                .ward(tenant.ward())
                 .primaryColorHex(tenant.primaryColorHex())
                 .accentColorHex(tenant.accentColorHex())
                 .packageCount(packages.size())

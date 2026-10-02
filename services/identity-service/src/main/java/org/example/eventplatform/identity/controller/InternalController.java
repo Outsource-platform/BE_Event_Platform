@@ -58,6 +58,7 @@ public class InternalController {
                 .logo(tenant.getLogo())
                 .category(tenant.getCategory())
                 .province(tenant.getProvince())
+                .ward(tenant.getWard())
                 .primaryColorHex(tenant.getPrimaryColorHex())
                 .accentColorHex(tenant.getAccentColorHex())
                 .build();

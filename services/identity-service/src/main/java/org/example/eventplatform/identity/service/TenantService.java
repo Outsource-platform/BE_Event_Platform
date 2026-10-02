@@ -79,6 +79,10 @@ public class TenantService {
         if (request.getProvince() != null) {
             tenant.setProvince(request.getProvince().trim());
         }
+        if (request.getWard() != null) {
+            String ward = request.getWard().trim();
+            tenant.setWard(ward.isEmpty() ? null : ward);
+        }
         return toResponse(tenant);
     }
 
@@ -98,6 +102,7 @@ public class TenantService {
                 .statusConfirm(tenant.getStatusConfirm())
                 .category(tenant.getCategory())
                 .province(tenant.getProvince())
+                .ward(tenant.getWard())
                 .primaryColorHex(tenant.getPrimaryColorHex())
                 .accentColorHex(tenant.getAccentColorHex())
                 .build();

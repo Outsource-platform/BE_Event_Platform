@@ -32,6 +32,9 @@ public class Tenant extends BaseEntity {
     // Tỉnh/thành đơn vị hoạt động — dùng cho phần "khám phá khu vực" trên sàn khách.
     private String province;
 
+    // Phường/xã (địa giới 2 cấp sau cải cách) — dùng cho khám phá theo khu vực.
+    private String ward;
+
     @Column(name = "primary_color_hex")
     private String primaryColorHex;
 

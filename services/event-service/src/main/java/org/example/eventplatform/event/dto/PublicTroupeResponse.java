@@ -14,6 +14,7 @@ public record PublicTroupeResponse(
         String logo,
         String category,
         String province,
+        String ward,
         String primaryColorHex,
         String accentColorHex,
         int packageCount,

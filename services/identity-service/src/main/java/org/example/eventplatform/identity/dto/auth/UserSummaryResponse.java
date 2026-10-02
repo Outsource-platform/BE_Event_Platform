@@ -26,6 +26,7 @@ public class UserSummaryResponse {
     private BigDecimal commissionRate;
     private String category;
     private String province;
+    private String ward;
     private String primaryColorHex;
     private String accentColorHex;
 }

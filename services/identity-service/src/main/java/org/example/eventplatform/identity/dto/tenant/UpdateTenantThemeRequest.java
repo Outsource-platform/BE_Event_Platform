@@ -21,4 +21,7 @@ public class UpdateTenantThemeRequest {
 
     // Tỉnh/thành đơn vị hoạt động, hiện trong phần khám phá khu vực của khách.
     private String province;
+
+    // Phường/xã trong tỉnh đã chọn; gửi chuỗi rỗng để xoá.
+    private String ward;
 }

@@ -31,8 +31,9 @@ public class PublicCatalogController {
     @GetMapping("/troupes")
     public ResponseEntity<List<PublicTroupeResponse>> listTroupes(
             @RequestParam(required = false) String category,
-            @RequestParam(required = false) String province) {
-        return ResponseEntity.ok(publicCatalogService.listTroupes(category, province));
+            @RequestParam(required = false) String province,
+            @RequestParam(required = false) String ward) {
+        return ResponseEntity.ok(publicCatalogService.listTroupes(category, province, ward));
     }
 
     @GetMapping("/troupes/{id}")
