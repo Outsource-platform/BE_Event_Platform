@@ -1,6 +1,7 @@
 package org.example.eventplatform.identity.service;
 
 import lombok.RequiredArgsConstructor;
+import org.example.eventplatform.identity.client.AccountCleanupClient;
 import org.example.eventplatform.identity.dto.auth.AuthTokenResponse;
 import org.example.eventplatform.identity.dto.auth.CustomerRegisterRequest;
 import org.example.eventplatform.identity.dto.auth.LoginRequest;
@@ -10,6 +11,7 @@ import org.example.eventplatform.identity.entity.RegistrationStatus;
 import org.example.eventplatform.identity.entity.Role;
 import org.example.eventplatform.identity.entity.Tenant;
 import org.example.eventplatform.identity.entity.User;
+import org.example.eventplatform.identity.entity.UserStatus;
 import org.example.eventplatform.identity.repository.RoleRepository;
 import org.example.eventplatform.identity.repository.TenantRepository;
 import org.example.eventplatform.identity.repository.UserRepository;
@@ -33,6 +35,7 @@ public class AuthService {
     private final RoleRepository roleRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
+    private final AccountCleanupClient accountCleanupClient;
 
     @Transactional(readOnly = true)
     public AuthTokenResponse login(LoginRequest request) {
@@ -180,5 +183,43 @@ public class AuthService {
                 .primaryColorHex(user.getTenant() != null ? user.getTenant().getPrimaryColorHex() : null)
                 .accentColorHex(user.getTenant() != null ? user.getTenant().getAccentColorHex() : null)
                 .build();
+    }
+
+    /**
+     * Xoá tài khoản theo yêu cầu của chính người dùng (bắt buộc với app có đăng ký tài khoản). Khách và thành viên
+     * được xoá tại đây; quản trị viên đơn vị gắn với dữ liệu cả đơn vị nên phải liên hệ hỗ trợ.
+     * Dọn dữ liệu ở service khác trước; xong mới ẩn danh tài khoản, nên nếu bước dọn lỗi thì tài khoản còn nguyên để thử lại.
+     */
+    @Transactional
+    public void deleteAccount(Long userId, String password) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản"));
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new RuntimeException("Mật khẩu không chính xác");
+        }
+        String role = user.getRoles() != null ? user.getRoles().getName() : "";
+        if (!CUSTOMER_ROLE.equals(role) && !"TN_MEMBER".equals(role)) {
+            throw new RuntimeException("Tài khoản quản trị cần gửi yêu cầu xoá qua email hỗ trợ để được bàn giao dữ liệu đơn vị");
+        }
+
+        try {
+            accountCleanupClient.deleteNotificationData(userId);
+            if (CUSTOMER_ROLE.equals(role)) {
+                accountCleanupClient.anonymizeCustomerRecords(userId);
+            }
+        } catch (Exception ex) {
+            throw new IllegalStateException("Hệ thống đang bận, vui lòng thử xoá tài khoản lại sau ít phút");
+        }
+
+        user.setUsername("deleted_" + user.getId());
+        user.setFullName("Người dùng đã xóa");
+        user.setEmail(null);
+        user.setPhone(null);
+        // Mật khẩu ngẫu nhiên không ai biết, để tài khoản không thể đăng nhập lại.
+        user.setPassword(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
+        user.setVerificationToken(null);
+        user.setIsActive(false);
+        user.setStatus(UserStatus.DELETED);
+        userRepository.save(user);
     }
 }

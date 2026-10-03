@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.eventplatform.identity.dto.auth.AuthTokenResponse;
 import org.example.eventplatform.identity.dto.auth.CustomerRegisterRequest;
+import org.example.eventplatform.identity.dto.auth.DeleteAccountRequest;
 import org.example.eventplatform.identity.dto.auth.LoginRequest;
 import org.example.eventplatform.identity.dto.auth.RefreshTokenRequest;
 import org.example.eventplatform.identity.dto.auth.TenantLookupResponse;
@@ -39,6 +40,14 @@ public class AuthController {
     @PostMapping("/refresh")
     public ResponseEntity<AuthTokenResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
         return ResponseEntity.ok(authService.refresh(request.getRefreshToken()));
+    }
+
+    /** Người dùng tự xoá tài khoản của mình (xác nhận bằng mật khẩu). */
+    @PostMapping("/delete-account")
+    public ResponseEntity<Void> deleteAccount(@AuthenticationPrincipal JwtPrincipal principal,
+                                              @Valid @RequestBody DeleteAccountRequest request) {
+        authService.deleteAccount(principal.userId(), request.getPassword());
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/me")

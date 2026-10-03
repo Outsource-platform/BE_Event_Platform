@@ -148,4 +148,24 @@ public class CustomerService {
                 .createdAt(customer.getCreatedAt())
                 .build();
     }
+
+    /**
+     * Khi khách xoá tài khoản: các bản ghi CRM của họ ở từng đơn vị được ẩn danh (giữ lại để lịch sử show,
+     * đối soát của đơn vị không vỡ) và ngắt liên kết với tài khoản.
+     */
+    @Transactional
+    public int anonymizeByUserId(Long userId) {
+        java.util.List<Customer> rows = customerRepository.findByUserId(userId);
+        for (Customer c : rows) {
+            c.setFullName("Khách đã xóa tài khoản");
+            c.setPhone("deleted-" + c.getId()); // cột bắt buộc và duy nhất theo từng đơn vị
+            c.setEmail(null);
+            c.setAddress(null);
+            c.setNote(null);
+            c.setUserId(null);
+            c.setActive(false);
+        }
+        customerRepository.saveAll(rows);
+        return rows.size();
+    }
 }

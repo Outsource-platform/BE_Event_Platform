@@ -49,6 +49,12 @@ public class InternalController {
         return ResponseEntity.ok(customerService.findOrCreate(request));
     }
 
+    @PostMapping("/customers/anonymize")
+    public ResponseEntity<Void> anonymize(@RequestParam("userId") Long userId) {
+        customerService.anonymizeByUserId(userId);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/customers")
     public ResponseEntity<List<CustomerSummaryResponse>> listByUserId(@RequestParam("userId") Long userId) {
         return ResponseEntity.ok(customerService.findByUserId(userId));
