@@ -1,6 +1,7 @@
 package org.example.eventplatform.identity.service;
 
 import lombok.RequiredArgsConstructor;
+import org.example.eventplatform.identity.dto.tenant.PlatformStatsResponse;
 import org.example.eventplatform.identity.dto.tenant.TenantRegisterRequest;
 import org.example.eventplatform.identity.dto.tenant.TenantRegisterResponse;
 import org.example.eventplatform.identity.dto.tenant.TenantResponse;
@@ -89,6 +90,23 @@ public class TenantService {
     @Transactional(readOnly = true)
     public List<TenantResponse> getAllTenants() {
         return tenantRepository.findAll().stream().map(this::toResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PlatformStatsResponse getPlatformStats() {
+        return PlatformStatsResponse.builder()
+                .tenantTotal(tenantRepository.count())
+                .tenantActive(tenantRepository.countByActiveTrue())
+                .customerTotal(userRepository.countByRoleName("CUSTOMER"))
+                .build();
+    }
+
+    @Transactional
+    public TenantResponse setActive(Long id, boolean active) {
+        Tenant tenant = tenantRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn vị"));
+        tenant.setActive(active);
+        return toResponse(tenantRepository.save(tenant));
     }
 
     private TenantResponse toResponse(Tenant tenant) {

@@ -15,4 +15,7 @@ public class ServiceCategoryRequest {
     private String code;
 
     private String description;
+
+    // Để trống khi tạo (mặc định bật); khi sửa dùng để ẩn/hiện lại loại dịch vụ.
+    private Boolean active;
 }

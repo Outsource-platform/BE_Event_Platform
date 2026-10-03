@@ -55,8 +55,16 @@ public class ServiceCategoryService {
         category.setName(request.getName());
         category.setCode(request.getCode());
         category.setDescription(request.getDescription());
+        if (request.getActive() != null) {
+            category.setActive(request.getActive());
+        }
 
         return toResponse(serviceCategoryRepository.save(category));
+    }
+
+    @Transactional(readOnly = true)
+    public List<ServiceCategoryResponse> getAllCategories() {
+        return serviceCategoryRepository.findAll().stream().map(this::toResponse).toList();
     }
 
     @Transactional

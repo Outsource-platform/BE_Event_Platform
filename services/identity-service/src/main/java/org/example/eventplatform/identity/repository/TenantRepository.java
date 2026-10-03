@@ -16,4 +16,6 @@ public interface TenantRepository extends JpaRepository<Tenant, Long> {
     boolean existsByEmail(String email);
 
     boolean existsByDomain(String domain);
+
+    long countByActiveTrue();
 }

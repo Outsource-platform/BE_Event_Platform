@@ -25,6 +25,13 @@ public class ServiceCategoryController {
         return ResponseEntity.ok(serviceCategoryService.getActiveCategories());
     }
 
+    /** Gồm cả loại đang ẩn, cho màn quản trị. */
+    @GetMapping("/all")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<List<ServiceCategoryResponse>> getAll() {
+        return ResponseEntity.ok(serviceCategoryService.getAllCategories());
+    }
+
     @PostMapping
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<ServiceCategoryResponse> create(@Valid @RequestBody ServiceCategoryRequest request) {
