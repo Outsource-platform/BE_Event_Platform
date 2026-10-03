@@ -35,6 +35,9 @@ public class SecurityConfig {
                         // Danh mục loại dịch vụ và hồ sơ vendor công khai — sàn cần hiển thị cho khách xem
                         .requestMatchers(HttpMethod.GET, "/api/service-categories").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/vendor-profiles/**").permitAll()
+                        // Trang Tin tức công khai (SEO) và ảnh lưu local khi dev
+                        .requestMatchers(HttpMethod.GET, "/api/posts/public", "/api/posts/public/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/files/local/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

@@ -43,6 +43,10 @@ public class ResponseWrappingAdvice implements ResponseBodyAdvice<Object> {
         if (body instanceof ApiResponse<?>) {
             return body;
         }
+        // Nội dung nhị phân (ảnh, file) phải trả nguyên, bọc vào JSON sẽ làm hỏng file.
+        if (body instanceof byte[] || body instanceof org.springframework.core.io.Resource) {
+            return body;
+        }
         // A null body (e.g. ResponseEntity.noContent().build()) means the method
         // deliberately wants no body written — a 204 must stay bodyless.
         if (body == null) {

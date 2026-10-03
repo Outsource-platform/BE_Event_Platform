@@ -3,13 +3,17 @@ package org.example.eventplatform.catalog.config;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.eventplatform.catalog.entity.Banner;
+import org.example.eventplatform.catalog.entity.Post;
+import org.example.eventplatform.catalog.entity.PostStatus;
 import org.example.eventplatform.catalog.entity.ServiceCategory;
+import org.example.eventplatform.catalog.repository.PostRepository;
 import org.example.eventplatform.catalog.repository.BannerRepository;
 import org.example.eventplatform.catalog.repository.ServiceCategoryRepository;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -65,6 +69,47 @@ public class DataSeeder {
             repository.save(Banner.builder().title("Trọn gói tiệc cưới & sự kiện")
                     .subtitle("Ca nhạc, MC, âm thanh ánh sáng, trang trí").sortOrder(3).active(true).build());
             log.info("Seeded sample banners");
+        };
+    }
+
+    /**
+     * Hai bài mẫu của sàn để trang Tin tức không trống khi mới chạy. Chỉ seed khi chưa có bài nào;
+     * Super Admin sửa hoặc xoá thoải mái.
+     */
+    @Bean
+    public ApplicationRunner seedPosts(PostRepository repository) {
+        return args -> {
+            if (repository.count() > 0) {
+                return;
+            }
+            repository.save(Post.builder()
+                    .authorName("Occasio")
+                    .title("Occasio ra mắt: đặt show và quản lý đoàn biểu diễn trên một nền tảng")
+                    .slug("occasio-ra-mat-dat-show-va-quan-ly-doan-bieu-dien")
+                    .excerpt("Giới thiệu Occasio: nơi khách thuê tìm đoàn biểu diễn, đơn vị quản lý show, thành viên và chia tiền.")
+                    .content("<p>Occasio giúp các đoàn lân sư rồng, ban nhạc, MC và đơn vị tổ chức sự kiện quản lý toàn bộ công việc "
+                            + "trên một nơi: lịch show, gói dịch vụ, thành viên và chia tiền.</p>"
+                            + "<h2>Dành cho đơn vị biểu diễn</h2><ul><li>Quản lý lịch show và đơn khách đặt</li>"
+                            + "<li>Phân công thành viên, chấm công, chia tiền minh bạch</li><li>Bán gói show ngay trên sàn</li></ul>"
+                            + "<h2>Dành cho khách thuê</h2><p>Tìm đơn vị theo khu vực, xem gói và giá, gửi yêu cầu đặt show chỉ trong vài bước.</p>")
+                    .seoTitle("Occasio - Nền tảng đặt show và quản lý đoàn biểu diễn")
+                    .status(PostStatus.PUBLISHED)
+                    .publishedAt(LocalDateTime.now())
+                    .build());
+            repository.save(Post.builder()
+                    .authorName("Occasio")
+                    .title("Cách chọn đoàn lân sư rồng cho lễ khai trương")
+                    .slug("cach-chon-doan-lan-su-rong-cho-le-khai-truong")
+                    .excerpt("Vài tiêu chí giúp chủ cửa hàng chọn đoàn lân phù hợp ngân sách, quy mô và không gian khai trương.")
+                    .content("<p>Khai trương là dịp quan trọng, chọn đúng đoàn lân sẽ giúp buổi lễ thêm trọn vẹn.</p>"
+                            + "<h2>1. Xác định quy mô và không gian</h2><p>Mặt bằng hẹp thích hợp màn múa lân gọn, "
+                            + "sân rộng có thể thêm trống hội và rồng.</p>"
+                            + "<h2>2. So sánh gói và giá</h2><p>Xem rõ thời lượng, số thành viên và các hạng mục kèm theo trước khi đặt.</p>"
+                            + "<h2>3. Đặt sớm và chốt lịch</h2><p>Các ngày đẹp thường kín lịch, nên đặt trước ít nhất một tuần.</p>")
+                    .status(PostStatus.PUBLISHED)
+                    .publishedAt(LocalDateTime.now().minusDays(1))
+                    .build());
+            log.info("Seeded sample posts");
         };
     }
 }

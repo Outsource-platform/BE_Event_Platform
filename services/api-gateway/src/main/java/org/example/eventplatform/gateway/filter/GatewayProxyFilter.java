@@ -45,6 +45,9 @@ public class GatewayProxyFilter implements WebFilter, Ordered {
             new PublicRoute(HttpMethod.GET, "/api/public/**"),
             new PublicRoute(HttpMethod.POST, "/api/tenants/register"),
             new PublicRoute(HttpMethod.POST, "/api/events"),
+            new PublicRoute(HttpMethod.GET, "/api/posts/public"),
+            new PublicRoute(HttpMethod.GET, "/api/posts/public/**"),
+            new PublicRoute(HttpMethod.GET, "/api/files/local/**"),
             new PublicRoute(HttpMethod.GET, "/api/service-categories"),
             new PublicRoute(HttpMethod.GET, "/api/vendor-profiles"),
             new PublicRoute(HttpMethod.GET, "/api/vendor-profiles/**")
