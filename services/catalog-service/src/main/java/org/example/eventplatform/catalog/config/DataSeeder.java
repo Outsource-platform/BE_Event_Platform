@@ -83,21 +83,21 @@ public class DataSeeder {
                 return;
             }
             repository.save(Post.builder()
-                    .authorName("Occasio")
-                    .title("Occasio ra mắt: đặt show và quản lý đoàn biểu diễn trên một nền tảng")
+                    .authorName("Stagio")
+                    .title("Stagio ra mắt: đặt show và quản lý đoàn biểu diễn trên một nền tảng")
                     .slug("occasio-ra-mat-dat-show-va-quan-ly-doan-bieu-dien")
-                    .excerpt("Giới thiệu Occasio: nơi khách thuê tìm đoàn biểu diễn, đơn vị quản lý show, thành viên và chia tiền.")
-                    .content("<p>Occasio giúp các đoàn lân sư rồng, ban nhạc, MC và đơn vị tổ chức sự kiện quản lý toàn bộ công việc "
+                    .excerpt("Giới thiệu Stagio: nơi khách thuê tìm đoàn biểu diễn, đơn vị quản lý show, thành viên và chia tiền.")
+                    .content("<p>Stagio giúp các đoàn lân sư rồng, ban nhạc, MC và đơn vị tổ chức sự kiện quản lý toàn bộ công việc "
                             + "trên một nơi: lịch show, gói dịch vụ, thành viên và chia tiền.</p>"
                             + "<h2>Dành cho đơn vị biểu diễn</h2><ul><li>Quản lý lịch show và đơn khách đặt</li>"
                             + "<li>Phân công thành viên, chấm công, chia tiền minh bạch</li><li>Bán gói show ngay trên sàn</li></ul>"
                             + "<h2>Dành cho khách thuê</h2><p>Tìm đơn vị theo khu vực, xem gói và giá, gửi yêu cầu đặt show chỉ trong vài bước.</p>")
-                    .seoTitle("Occasio - Nền tảng đặt show và quản lý đoàn biểu diễn")
+                    .seoTitle("Stagio - Nền tảng đặt show và quản lý đoàn biểu diễn")
                     .status(PostStatus.PUBLISHED)
                     .publishedAt(LocalDateTime.now())
                     .build());
             repository.save(Post.builder()
-                    .authorName("Occasio")
+                    .authorName("Stagio")
                     .title("Cách chọn đoàn lân sư rồng cho lễ khai trương")
                     .slug("cach-chon-doan-lan-su-rong-cho-le-khai-truong")
                     .excerpt("Vài tiêu chí giúp chủ cửa hàng chọn đoàn lân phù hợp ngân sách, quy mô và không gian khai trương.")

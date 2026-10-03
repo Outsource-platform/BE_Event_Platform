@@ -152,7 +152,7 @@ public class PostService {
             post.setAuthorName(tenant.name());
             post.setAuthorDomain(tenant.domain());
         } else if (post.getTenantId() == null) {
-            post.setAuthorName("Occasio");
+            post.setAuthorName("Stagio");
         }
     }
 
