@@ -25,12 +25,14 @@ x-app-env: &app-env
   NOTIFICATION_SERVICE_URL: http://notification-service:8085
 
 services:
+  # Redis, RabbitMQ chỉ bind vào 127.0.0.1: trước đây mở ra internet (Redis không mật khẩu). Service trong compose
+  # gọi nhau qua mạng Docker nên không cần cổng công khai; muốn xem giao diện RabbitMQ thì dùng SSH tunnel tới 15673.
   redis:
     image: redis:7-alpine
     container_name: event-platform-redis
     restart: unless-stopped
     ports:
-      - "6380:6379"
+      - "127.0.0.1:6380:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -47,8 +49,8 @@ services:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
     ports:
-      - "5673:5672"
-      - "15673:15672"
+      - "127.0.0.1:5673:5672"
+      - "127.0.0.1:15673:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
