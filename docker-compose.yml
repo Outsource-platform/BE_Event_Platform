@@ -23,6 +23,7 @@ x-app-env: &app-env
   EVENT_SERVICE_URL: http://event-service:8083
   CUSTOMER_SERVICE_URL: http://customer-service:8084
   NOTIFICATION_SERVICE_URL: http://notification-service:8085
+  DEMO_SEED_ENABLED: ${DEMO_SEED_ENABLED:-false}
 
 services:
   # Redis, RabbitMQ chỉ bind vào 127.0.0.1: trước đây mở ra internet (Redis không mật khẩu). Service trong compose
@@ -69,6 +70,7 @@ services:
       DB_NAME: identity_db
       SUPERADMIN_USERNAME: ${SUPERADMIN_USERNAME}
       SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD}
+      DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD:-}
     depends_on:
       redis:
         condition: service_healthy
