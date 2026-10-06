@@ -88,6 +88,33 @@ public class CustomerServiceClient {
         }
     }
 
+    /**
+     * Tên khách theo id, tra một lần cho cả trang danh sách. Lỗi thì trả map rỗng (tên khách để trống) chứ không
+     * làm hỏng cả danh sách show.
+     */
+    public java.util.Map<Long, String> findNamesByIds(java.util.Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return java.util.Map.of();
+        }
+        try {
+            CustomerSummary[] response = restClient.post()
+                    .uri("/api/internal/customers/by-ids")
+                    .body(java.util.Map.of("ids", ids))
+                    .retrieve()
+                    .body(CustomerSummary[].class);
+            java.util.Map<Long, String> names = new java.util.HashMap<>();
+            if (response != null) {
+                for (CustomerSummary c : response) {
+                    names.put(c.id(), c.fullName());
+                }
+            }
+            return names;
+        } catch (Exception ex) {
+            log.error("Could not batch-fetch customers {}", ids, ex);
+            return java.util.Map.of();
+        }
+    }
+
     public List<CustomerSummary> findByUserId(Long userId) {
         if (userId == null) {
             return List.of();

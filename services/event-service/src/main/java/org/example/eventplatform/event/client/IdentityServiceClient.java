@@ -1,12 +1,14 @@
 package org.example.eventplatform.event.client;
 
 import lombok.extern.slf4j.Slf4j;
+import org.example.eventplatform.shared.cache.TtlCache;
 import org.example.eventplatform.shared.client.InternalRestClients;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -93,15 +95,23 @@ public class IdentityServiceClient {
     /** Danh sách đoàn cho sàn khách hàng. Lỗi thì trả rỗng để trang khám phá không vỡ. */
     public List<PublicTenant> findPublicTenants() {
         try {
-            PublicTenant[] response = restClient.get()
-                    .uri("/api/internal/tenants/public")
-                    .retrieve()
-                    .body(PublicTenant[].class);
-            return response == null ? List.of() : Arrays.asList(response);
+            return publicTenantsCache.get(this::fetchPublicTenants);
         } catch (Exception ex) {
             log.error("Could not fetch public tenants", ex);
             return List.of();
         }
+    }
+
+    // Mỗi lượt mở trang chủ/duyệt sàn đều cần danh sách này; không cache thì mỗi lần đều đi một vòng sang
+    // identity-service và quét bảng tenants. 30 giây là đủ để đơn vị mới/bị khoá hiện ra gần như tức thì.
+    private final TtlCache<List<PublicTenant>> publicTenantsCache = new TtlCache<>(Duration.ofSeconds(30));
+
+    private List<PublicTenant> fetchPublicTenants() {
+        PublicTenant[] response = restClient.get()
+                .uri("/api/internal/tenants/public")
+                .retrieve()
+                .body(PublicTenant[].class);
+        return response == null ? List.of() : List.copyOf(Arrays.asList(response));
     }
 
     public record TenantSummary(Long id, String name, String domain, String email, boolean active) {

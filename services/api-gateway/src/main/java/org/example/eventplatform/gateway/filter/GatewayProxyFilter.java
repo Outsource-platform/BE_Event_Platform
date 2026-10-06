@@ -4,6 +4,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.eventplatform.gateway.route.RouteTable;
 import org.example.eventplatform.shared.security.JwtTokenProvider;
 import org.springframework.core.Ordered;
+import io.netty.channel.ChannelOption;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.resources.ConnectionProvider;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -19,6 +23,7 @@ import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
 import java.net.URI;
+import java.time.Duration;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -58,10 +63,63 @@ public class GatewayProxyFilter implements WebFilter, Ordered {
     private final RouteTable routeTable;
     private final WebClient webClient;
 
+    private final RateLimiter rateLimiter = new RateLimiter();
+
+    /** Đường công khai dễ bị lạm dụng và mức tối đa mỗi IP trong một khoảng thời gian. */
+    private record Limit(HttpMethod method, String path, int max, long windowMillis) {
+    }
+
+    private static final List<Limit> LIMITS = List.of(
+            new Limit(HttpMethod.POST, "/api/auth/login", 20, 60_000),
+            new Limit(HttpMethod.POST, "/api/auth/customer/register", 10, 3_600_000),
+            new Limit(HttpMethod.POST, "/api/tenants/register", 5, 3_600_000),
+            new Limit(HttpMethod.POST, "/api/auth/delete-account", 10, 3_600_000)
+    );
+
     public GatewayProxyFilter(JwtTokenProvider jwtTokenProvider, RouteTable routeTable, WebClient.Builder webClientBuilder) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.routeTable = routeTable;
-        this.webClient = webClientBuilder.build();
+        // Pool kết nối có hạn dùng để không giữ kết nối chết sau khi một service khởi động lại (lúc deploy), cùng
+        // timeout: không có thì một service treo sẽ giữ request của khách mãi và dồn tải lên gateway.
+        ConnectionProvider pool = ConnectionProvider.builder("gateway-upstream")
+                .maxConnections(200)
+                .pendingAcquireTimeout(Duration.ofSeconds(10))
+                .maxIdleTime(Duration.ofSeconds(30))
+                .maxLifeTime(Duration.ofMinutes(5))
+                .evictInBackground(Duration.ofSeconds(30))
+                .build();
+        HttpClient httpClient = HttpClient.create(pool)
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 3_000)
+                .responseTimeout(Duration.ofSeconds(30));
+        this.webClient = webClientBuilder.clientConnector(new ReactorClientHttpConnector(httpClient)).build();
+    }
+
+    /**
+     * IP khách theo header nginx gắn thêm; lấy phần tử cuối vì phần đầu do chính client khai nên giả mạo được.
+     * Không có header (không biết là ai) thì không giới hạn, để khỏi chặn nhầm cả người dùng thật dưới một IP chung.
+     */
+    private String clientIp(ServerHttpRequest request) {
+        String forwarded = request.getHeaders().getFirst("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            String[] parts = forwarded.split(",");
+            return parts[parts.length - 1].trim();
+        }
+        String real = request.getHeaders().getFirst("X-Real-IP");
+        return real == null || real.isBlank() ? null : real.trim();
+    }
+
+    private Mono<Void> rejectIfRateLimited(ServerWebExchange exchange, ServerHttpRequest request, String path) {
+        for (Limit limit : LIMITS) {
+            if (limit.method() == request.getMethod() && limit.path().equals(path)) {
+                String ip = clientIp(request);
+                if (ip != null && !rateLimiter.allow(ip + "|" + path, limit.max(), limit.windowMillis())) {
+                    exchange.getResponse().getHeaders().add("Retry-After", String.valueOf(limit.windowMillis() / 1000));
+                    return respond(exchange, HttpStatus.TOO_MANY_REQUESTS, "RATE_LIMITED",
+                            "Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút");
+                }
+            }
+        }
+        return null;
     }
 
     @Override
@@ -73,6 +131,11 @@ public class GatewayProxyFilter implements WebFilter, Ordered {
         if (request.getMethod() == HttpMethod.OPTIONS) {
             exchange.getResponse().setStatusCode(HttpStatus.NO_CONTENT);
             return exchange.getResponse().setComplete();
+        }
+
+        Mono<Void> limited = rejectIfRateLimited(exchange, request, path);
+        if (limited != null) {
+            return limited;
         }
 
         RouteTable.Route route = routeTable.resolve(path);

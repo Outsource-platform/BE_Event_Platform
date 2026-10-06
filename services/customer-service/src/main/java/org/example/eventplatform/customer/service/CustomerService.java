@@ -112,6 +112,15 @@ public class CustomerService {
                 });
     }
 
+    /** Tra nhiều khách một lần để danh sách show không phải gọi từng người (tránh N+1 giữa các service). */
+    @Transactional(readOnly = true)
+    public List<CustomerSummaryResponse> findByIds(java.util.Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return customerRepository.findAllById(ids).stream().map(this::toSummary).toList();
+    }
+
     @Transactional(readOnly = true)
     public List<CustomerSummaryResponse> findByUserId(Long userId) {
         return customerRepository.findByUserId(userId).stream().map(this::toSummary).toList();

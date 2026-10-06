@@ -11,7 +11,10 @@ import java.math.BigDecimal;
  * picked when creating an Event, not shared across tenants.
  */
 @Entity
-@Table(name = "show_packages")
+@Table(name = "show_packages", indexes = {
+        @Index(name = "idx_show_packages_tenant", columnList = "tenant_id"),
+        @Index(name = "idx_show_packages_active", columnList = "active")
+})
 @Getter
 @Setter
 @NoArgsConstructor

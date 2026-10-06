@@ -1,12 +1,14 @@
 package org.example.eventplatform.event.client;
 
 import lombok.extern.slf4j.Slf4j;
+import org.example.eventplatform.shared.cache.TtlCache;
 import org.example.eventplatform.shared.client.InternalRestClients;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 
@@ -15,6 +17,10 @@ import java.util.List;
 public class CatalogServiceClient {
 
     private final RestClient restClient;
+
+    // Danh mục và banner ít đổi nhưng ai mở trang chủ cũng cần: cache ngắn để không gọi sang catalog-service mỗi lần.
+    private final TtlCache<List<ServiceCategorySummary>> categoriesCache = new TtlCache<>(Duration.ofSeconds(60));
+    private final TtlCache<List<BannerSummary>> bannersCache = new TtlCache<>(Duration.ofSeconds(30));
 
     public CatalogServiceClient(@Value("${catalog-service.base-url}") String baseUrl,
                                  @Value("${internal.service-token:}") String internalToken) {
@@ -45,11 +51,13 @@ public class CatalogServiceClient {
     /** Danh mục dịch vụ cho trang chủ sàn. Lỗi thì trả rỗng để home không vỡ. */
     public List<ServiceCategorySummary> listServiceCategories() {
         try {
-            ServiceCategorySummary[] response = restClient.get()
-                    .uri("/api/internal/service-categories")
-                    .retrieve()
-                    .body(ServiceCategorySummary[].class);
-            return response == null ? List.of() : Arrays.asList(response);
+            return categoriesCache.get(() -> {
+                ServiceCategorySummary[] response = restClient.get()
+                        .uri("/api/internal/service-categories")
+                        .retrieve()
+                        .body(ServiceCategorySummary[].class);
+                return response == null ? List.<ServiceCategorySummary>of() : List.copyOf(Arrays.asList(response));
+            });
         } catch (Exception ex) {
             log.error("Could not fetch service categories", ex);
             return List.of();
@@ -59,11 +67,13 @@ public class CatalogServiceClient {
     /** Banner trang chủ đang bật. Lỗi thì trả rỗng để home không vỡ. */
     public List<BannerSummary> listBanners() {
         try {
-            BannerSummary[] response = restClient.get()
-                    .uri("/api/internal/banners")
-                    .retrieve()
-                    .body(BannerSummary[].class);
-            return response == null ? List.of() : Arrays.asList(response);
+            return bannersCache.get(() -> {
+                BannerSummary[] response = restClient.get()
+                        .uri("/api/internal/banners")
+                        .retrieve()
+                        .body(BannerSummary[].class);
+                return response == null ? List.<BannerSummary>of() : List.copyOf(Arrays.asList(response));
+            });
         } catch (Exception ex) {
             log.error("Could not fetch banners", ex);
             return List.of();

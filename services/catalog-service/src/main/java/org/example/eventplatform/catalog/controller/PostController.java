@@ -11,12 +11,14 @@ import org.example.eventplatform.catalog.dto.SitemapItem;
 import org.example.eventplatform.catalog.entity.PostStatus;
 import org.example.eventplatform.catalog.service.PostService;
 import org.example.eventplatform.shared.security.JwtPrincipal;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
 import java.util.List;
 
 /**
@@ -30,6 +32,9 @@ public class PostController {
 
     private final PostService postService;
 
+    // Trang Tin tức công khai cũng được web cache 60 giây (ISR); thêm header để CDN/nginx giữ được cùng thời gian.
+    private static final CacheControl PUBLIC_CACHE = CacheControl.maxAge(Duration.ofSeconds(60)).cachePublic();
+
     // ===== Công khai =====
 
     @GetMapping("/public")
@@ -37,17 +42,17 @@ public class PostController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size,
             @RequestParam(required = false) Long tenantId) {
-        return ResponseEntity.ok(postService.listPublished(page, size, tenantId));
+        return ResponseEntity.ok().cacheControl(PUBLIC_CACHE).body(postService.listPublished(page, size, tenantId));
     }
 
     @GetMapping("/public/sitemap")
     public ResponseEntity<List<SitemapItem>> sitemap() {
-        return ResponseEntity.ok(postService.sitemap());
+        return ResponseEntity.ok().cacheControl(PUBLIC_CACHE).body(postService.sitemap());
     }
 
     @GetMapping("/public/{slug}")
     public ResponseEntity<PostResponse> getPublic(@PathVariable String slug) {
-        return ResponseEntity.ok(postService.getPublished(slug));
+        return ResponseEntity.ok().cacheControl(PUBLIC_CACHE).body(postService.getPublished(slug));
     }
 
     // ===== Đơn vị =====

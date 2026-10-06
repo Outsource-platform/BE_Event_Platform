@@ -10,7 +10,10 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "users", uniqueConstraints = {
+@Table(name = "users", indexes = {
+        // Đăng nhập không kèm mã đoàn (Super Admin) tra theo username trên toàn bảng
+        @Index(name = "idx_users_username", columnList = "username")
+}, uniqueConstraints = {
         @UniqueConstraint(name = "uk_users_tenant_username", columnNames = {"tenant_id", "username"})
 })
 @Getter

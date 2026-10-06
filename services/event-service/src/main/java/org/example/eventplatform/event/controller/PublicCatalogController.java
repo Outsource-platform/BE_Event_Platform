@@ -5,6 +5,7 @@ import org.example.eventplatform.event.dto.HomeAppResponse;
 import org.example.eventplatform.event.dto.PublicPackageResponse;
 import org.example.eventplatform.event.dto.PublicTroupeResponse;
 import org.example.eventplatform.event.service.PublicCatalogService;
+import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Duration;
 import java.util.List;
 
 /** Không yêu cầu đăng nhập — khách vãng lai duyệt sàn trước khi tạo tài khoản. */
@@ -20,12 +22,15 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PublicCatalogController {
 
+    // Dữ liệu công khai đổi chậm: cho phép trình duyệt/CDN/nginx giữ ngắn hạn để giảm tải về backend.
+    private static final CacheControl CACHE = CacheControl.maxAge(Duration.ofSeconds(30)).cachePublic();
+
     private final PublicCatalogService publicCatalogService;
 
     /** Gộp dữ liệu trang chủ vào một lần gọi. */
     @GetMapping("/home_app")
     public ResponseEntity<HomeAppResponse> getHomeApp() {
-        return ResponseEntity.ok(publicCatalogService.getHomeApp());
+        return ResponseEntity.ok().cacheControl(CACHE).body(publicCatalogService.getHomeApp());
     }
 
     @GetMapping("/troupes")
@@ -33,16 +38,16 @@ public class PublicCatalogController {
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String province,
             @RequestParam(required = false) String ward) {
-        return ResponseEntity.ok(publicCatalogService.listTroupes(category, province, ward));
+        return ResponseEntity.ok().cacheControl(CACHE).body(publicCatalogService.listTroupes(category, province, ward));
     }
 
     @GetMapping("/troupes/{id}")
     public ResponseEntity<PublicTroupeResponse> getTroupe(@PathVariable Long id) {
-        return ResponseEntity.ok(publicCatalogService.getTroupe(id));
+        return ResponseEntity.ok().cacheControl(CACHE).body(publicCatalogService.getTroupe(id));
     }
 
     @GetMapping("/packages")
     public ResponseEntity<List<PublicPackageResponse>> listPackages() {
-        return ResponseEntity.ok(publicCatalogService.listPackages());
+        return ResponseEntity.ok().cacheControl(CACHE).body(publicCatalogService.listPackages());
     }
 }

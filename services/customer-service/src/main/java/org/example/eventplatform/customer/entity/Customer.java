@@ -8,7 +8,8 @@ import org.example.eventplatform.shared.entity.BaseEntity;
 @Table(name = "customers",
         indexes = {
                 @Index(name = "idx_customer_full_name", columnList = "fullName"),
-                @Index(name = "idx_customer_type", columnList = "type")
+                @Index(name = "idx_customer_type", columnList = "type"),
+                @Index(name = "idx_customer_user", columnList = "user_id")
         },
         // Unique per tenant, not globally — the old monolith's global unique(phone)
         // didn't match its own per-tenant duplicate check.

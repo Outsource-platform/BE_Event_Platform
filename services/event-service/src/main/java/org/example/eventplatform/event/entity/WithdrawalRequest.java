@@ -16,7 +16,10 @@ import java.time.LocalDateTime;
  * would otherwise look like an in-app real-money transaction.
  */
 @Entity
-@Table(name = "withdrawal_requests")
+@Table(name = "withdrawal_requests", indexes = {
+        @Index(name = "idx_withdrawal_tenant_status", columnList = "tenant_id, status"),
+        @Index(name = "idx_withdrawal_user", columnList = "user_id")
+})
 @Getter
 @Setter
 @NoArgsConstructor

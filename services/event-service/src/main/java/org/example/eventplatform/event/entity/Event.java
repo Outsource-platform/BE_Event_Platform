@@ -11,7 +11,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "events")
+@Table(name = "events", indexes = {
+        // Lịch theo tháng và danh sách show của đơn vị lọc theo tenant + ngày
+        @Index(name = "idx_events_tenant_date", columnList = "tenant_id, event_date"),
+        // "Show của khách" tra theo customer_id
+        @Index(name = "idx_events_customer", columnList = "customer_id"),
+        // Thống kê toàn sàn đếm theo trạng thái
+        @Index(name = "idx_events_status", columnList = "status")
+})
 @Getter
 @Setter
 @NoArgsConstructor

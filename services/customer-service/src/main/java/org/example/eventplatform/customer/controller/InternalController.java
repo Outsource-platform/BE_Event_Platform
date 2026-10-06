@@ -3,6 +3,7 @@ package org.example.eventplatform.customer.controller;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.example.eventplatform.customer.dto.internal.CustomerIdsRequest;
 import org.example.eventplatform.customer.dto.internal.CustomerSummaryResponse;
 import org.example.eventplatform.customer.dto.internal.FindOrCreateCustomerRequest;
 import org.example.eventplatform.customer.entity.Customer;
@@ -53,6 +54,11 @@ public class InternalController {
     public ResponseEntity<Void> anonymize(@RequestParam("userId") Long userId) {
         customerService.anonymizeByUserId(userId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/customers/by-ids")
+    public ResponseEntity<List<CustomerSummaryResponse>> byIds(@RequestBody CustomerIdsRequest request) {
+        return ResponseEntity.ok(customerService.findByIds(request.ids()));
     }
 
     @GetMapping("/customers")

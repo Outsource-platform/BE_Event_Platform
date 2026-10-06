@@ -9,10 +9,12 @@ import org.example.eventplatform.event.dto.PublicPackageResponse;
 import org.example.eventplatform.event.dto.PublicTroupeResponse;
 import org.example.eventplatform.event.entity.ShowPackage;
 import org.example.eventplatform.event.repository.ShowPackageRepository;
+import org.example.eventplatform.shared.cache.TtlCache;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.text.Collator;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -110,6 +112,13 @@ public class PublicCatalogService {
     /** Gộp mọi thứ trang chủ cần vào một lần gọi. */
     @Transactional(readOnly = true)
     public HomeAppResponse getHomeApp() {
+        return homeCache.get(this::buildHomeApp);
+    }
+
+    // Trang chủ là endpoint nặng nhất và mọi lượt mở app đều gọi: gom kết quả trong 20 giây.
+    private final TtlCache<HomeAppResponse> homeCache = new TtlCache<>(Duration.ofSeconds(20));
+
+    private HomeAppResponse buildHomeApp() {
         List<IdentityServiceClient.PublicTenant> tenants = identityServiceClient.findPublicTenants();
         Map<Long, List<ShowPackage>> packagesByTenant = activePackagesByTenant();
 

@@ -214,8 +214,13 @@ public class EventService {
             return List.of();
         }
         List<Long> customerIds = customers.stream().map(CustomerServiceClient.CustomerSummary::id).toList();
-        return eventRepository.findByCustomerIdInOrderByCreatedAtDesc(customerIds).stream()
-                .map(this::toResponse)
+        List<Event> events = eventRepository.findByCustomerIdInOrderByCreatedAtDesc(customerIds);
+        Map<Long, String> names = customerNames(events);
+        // Khách có thể đặt ở nhiều đơn vị: mỗi đơn vị chỉ tra thông tin một lần.
+        Map<Long, TenantVendorContext> contexts = new java.util.HashMap<>();
+        return events.stream()
+                .map(e -> toResponse(e, contexts.computeIfAbsent(e.getTenantId(),
+                        id -> TenantVendorContext.fetch(id, identityServiceClient, catalogServiceClient)), names))
                 .toList();
     }
 
@@ -274,7 +279,9 @@ public class EventService {
     @Transactional(readOnly = true)
     public Page<EventResponse> getTenantEvents(Long tenantId, Pageable pageable) {
         TenantVendorContext ctx = TenantVendorContext.fetch(tenantId, identityServiceClient, catalogServiceClient);
-        return eventRepository.findByTenantId(tenantId, pageable).map(e -> toResponse(e, ctx));
+        Page<Event> page = eventRepository.findByTenantId(tenantId, pageable);
+        Map<Long, String> names = customerNames(page.getContent());
+        return page.map(e -> toResponse(e, ctx, names));
     }
 
     @Transactional(readOnly = true)
@@ -282,7 +289,9 @@ public class EventService {
         LocalDate start = LocalDate.of(year, month, 1);
         LocalDate end = start.withDayOfMonth(start.lengthOfMonth());
         TenantVendorContext ctx = TenantVendorContext.fetch(tenantId, identityServiceClient, catalogServiceClient);
-        return eventRepository.findByTenantIdAndEventDateBetween(tenantId, start, end, pageable).map(e -> toResponse(e, ctx));
+        Page<Event> page = eventRepository.findByTenantIdAndEventDateBetween(tenantId, start, end, pageable);
+        Map<Long, String> names = customerNames(page.getContent());
+        return page.map(e -> toResponse(e, ctx, names));
     }
 
     @Transactional(readOnly = true)
@@ -647,6 +656,18 @@ public class EventService {
     }
 
     private EventResponse toResponse(Event event, TenantVendorContext ctx) {
+        return toResponse(event, ctx, null);
+    }
+
+    /** Tên khách của các show trong một danh sách, tra một lần thay vì mỗi show một lần gọi HTTP. */
+    private Map<Long, String> customerNames(java.util.Collection<Event> events) {
+        java.util.Set<Long> ids = events.stream().map(Event::getCustomerId).filter(java.util.Objects::nonNull)
+                .collect(Collectors.toSet());
+        return customerServiceClient.findNamesByIds(ids);
+    }
+
+    /** {@code customerNames} null nghĩa là chưa tra trước: tự tra từng khách (dùng cho một show đơn lẻ). */
+    private EventResponse toResponse(Event event, TenantVendorContext ctx, Map<Long, String> customerNames) {
         EventResponse response = EventResponse.builder()
                 .id(event.getId())
                 .name(event.getName())
@@ -681,9 +702,13 @@ public class EventService {
                 .build();
 
         if (response.getCustomerId() != null) {
-            CustomerServiceClient.CustomerSummary customer = customerServiceClient.findCustomer(response.getCustomerId());
-            if (customer != null) {
-                response.setCustomerName(customer.fullName());
+            if (customerNames != null) {
+                response.setCustomerName(customerNames.get(response.getCustomerId()));
+            } else {
+                CustomerServiceClient.CustomerSummary customer = customerServiceClient.findCustomer(response.getCustomerId());
+                if (customer != null) {
+                    response.setCustomerName(customer.fullName());
+                }
             }
         }
         if (ctx.tenant() != null) {

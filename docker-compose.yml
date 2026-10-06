@@ -61,6 +61,7 @@ services:
     build: ./services/identity-service
     container_name: event-platform-identity-service
     restart: unless-stopped
+    mem_limit: 448m
     environment:
       <<: *app-env
       DB_NAME: identity_db
@@ -74,6 +75,7 @@ services:
     build: ./services/catalog-service
     container_name: event-platform-catalog-service
     restart: unless-stopped
+    mem_limit: 416m
     environment:
       <<: *app-env
       DB_NAME: catalog_db
@@ -88,6 +90,7 @@ services:
     build: ./services/event-service
     container_name: event-platform-event-service
     restart: unless-stopped
+    mem_limit: 448m
     environment:
       <<: *app-env
       DB_NAME: event_db
@@ -99,6 +102,7 @@ services:
     build: ./services/customer-service
     container_name: event-platform-customer-service
     restart: unless-stopped
+    mem_limit: 352m
     environment:
       <<: *app-env
       DB_NAME: customer_db
@@ -107,6 +111,7 @@ services:
     build: ./services/notification-service
     container_name: event-platform-notification-service
     restart: unless-stopped
+    mem_limit: 384m
     environment:
       <<: *app-env
       DB_NAME: notification_db
@@ -122,6 +127,7 @@ services:
     build: ./services/api-gateway
     container_name: event-platform-api-gateway
     restart: unless-stopped
+    mem_limit: 384m
     environment:
       <<: *app-env
     ports:
