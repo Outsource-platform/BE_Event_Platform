@@ -43,6 +43,14 @@ public class TenantEventController {
         return ResponseEntity.ok(eventService.getTenantSchedule(principal.tenantId(), month, year, pageable));
     }
 
+    @GetMapping("/by-customer/{customerId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<EventResponse>> getEventsForCustomer(
+            @AuthenticationPrincipal JwtPrincipal principal,
+            @PathVariable Long customerId) {
+        return ResponseEntity.ok(eventService.listTenantEventsForCustomer(principal.tenantId(), customerId));
+    }
+
     @GetMapping("/summary")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<MonthlySummaryResponse> getMySummary(

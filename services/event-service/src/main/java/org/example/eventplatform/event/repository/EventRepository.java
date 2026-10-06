@@ -5,6 +5,8 @@ import org.example.eventplatform.event.entity.EventStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -22,4 +24,11 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     Page<Event> findByTenantIdAndEventDateBetween(Long tenantId, LocalDate start, LocalDate end, Pageable pageable);
 
     List<Event> findByCustomerIdInOrderByCreatedAtDesc(List<Long> customerIds);
+
+    List<Event> findByTenantIdAndCustomerIdOrderByEventDateDesc(Long tenantId, Long customerId);
+
+    List<Event> findByShowCodeIsNullAndTenantIdIsNotNullAndEventDateIsNotNullOrderByIdAsc();
+
+    @Query("select e.showCode from Event e where e.tenantId = :tenantId and e.showCode like concat(:prefix, '%')")
+    List<String> findShowCodesByPrefix(@Param("tenantId") Long tenantId, @Param("prefix") String prefix);
 }

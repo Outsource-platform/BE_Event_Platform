@@ -20,6 +20,7 @@ import java.time.LocalTime;
 @AllArgsConstructor
 public class EventResponse {
     private Long id;
+    private String showCode;
     private String name;
     private EventType type;
     private String typeDisplayName;

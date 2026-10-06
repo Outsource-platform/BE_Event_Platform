@@ -11,14 +11,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "events", indexes = {
-        // Lịch theo tháng và danh sách show của đơn vị lọc theo tenant + ngày
-        @Index(name = "idx_events_tenant_date", columnList = "tenant_id, event_date"),
-        // "Show của khách" tra theo customer_id
-        @Index(name = "idx_events_customer", columnList = "customer_id"),
-        // Thống kê toàn sàn đếm theo trạng thái
-        @Index(name = "idx_events_status", columnList = "status")
-})
+@Table(name = "events",
+        uniqueConstraints = @UniqueConstraint(name = "uk_event_tenant_show_code", columnNames = {"tenant_id", "show_code"}),
+        indexes = {
+                // Lịch theo tháng và danh sách show của đơn vị lọc theo tenant + ngày
+                @Index(name = "idx_events_tenant_date", columnList = "tenant_id, event_date"),
+                // "Show của khách" tra theo customer_id
+                @Index(name = "idx_events_customer", columnList = "customer_id"),
+                // Thống kê toàn sàn đếm theo trạng thái
+                @Index(name = "idx_events_status", columnList = "status")
+        })
 @Getter
 @Setter
 @NoArgsConstructor
@@ -31,6 +33,10 @@ public class Event extends BaseEntity {
     private Long id;
 
     private String name;
+
+    /** Mã đọc được trong đoàn, ví dụ abc-2610-0007. Cấp một lần lúc tạo show. */
+    @Column(name = "show_code", length = 40)
+    private String showCode;
 
     @Enumerated(EnumType.STRING)
     private EventType type;

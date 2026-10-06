@@ -51,6 +51,7 @@ public class EventService {
     private final ShowPackageRepository showPackageRepository;
     private final CrewRoleRepository crewRoleRepository;
     private final NotificationPublisher notificationPublisher;
+    private final ShowCodeService showCodeService;
     private final IdentityServiceClient identityServiceClient;
     private final CustomerServiceClient customerServiceClient;
     private final CatalogServiceClient catalogServiceClient;
@@ -122,7 +123,7 @@ public class EventService {
             event.setCreatedBy(principal != null ? principal.username() : "GUEST");
         }
 
-        Event saved = eventRepository.save(event);
+        Event saved = saveWithShowCode(event);
 
         if (isTenantMember) {
             notificationPublisher.publish(
@@ -193,7 +194,7 @@ public class EventService {
                 .build();
         event.setCreatedBy(principal.username());
 
-        Event saved = eventRepository.save(event);
+        Event saved = saveWithShowCode(event);
 
         notificationPublisher.publish(
                 "BOOKING_REQUESTED",
@@ -222,6 +223,19 @@ public class EventService {
                 .map(e -> toResponse(e, contexts.computeIfAbsent(e.getTenantId(),
                         id -> TenantVendorContext.fetch(id, identityServiceClient, catalogServiceClient)), names))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<EventResponse> listTenantEventsForCustomer(Long tenantId, Long customerId) {
+        List<Event> events = eventRepository.findByTenantIdAndCustomerIdOrderByEventDateDesc(tenantId, customerId);
+        TenantVendorContext ctx = TenantVendorContext.fetch(tenantId, identityServiceClient, catalogServiceClient);
+        Map<Long, String> names = customerNames(events);
+        return events.stream().map(event -> toResponse(event, ctx, names)).toList();
+    }
+
+    private Event saveWithShowCode(Event event) {
+        showCodeService.assign(event);
+        return eventRepository.save(event);
     }
 
     private BigDecimal calculateDefaultFee(BigDecimal totalAmount) {
@@ -670,6 +684,7 @@ public class EventService {
     private EventResponse toResponse(Event event, TenantVendorContext ctx, Map<Long, String> customerNames) {
         EventResponse response = EventResponse.builder()
                 .id(event.getId())
+                .showCode(event.getShowCode())
                 .name(event.getName())
                 .type(event.getType())
                 .typeDisplayName(event.getType() != null ? event.getType().getDisplayName() : null)
