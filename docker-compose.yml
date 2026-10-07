@@ -83,12 +83,16 @@ services:
     environment:
       <<: *app-env
       DB_NAME: catalog_db
+      LOCAL_UPLOAD_DIR: /data/uploads
       S3_FPT_ACCESSKEY_ID: ${S3_FPT_ACCESSKEY_ID:-}
       S3_FPT_SECRET_ACCESS_KEY: ${S3_FPT_SECRET_ACCESS_KEY:-}
       S3_FPT_ENDPOINT: ${S3_FPT_ENDPOINT:-}
       S3_FPT_REGION: ${S3_FPT_REGION:-han02}
       S3_FPT_BUCKET_NAME: ${S3_FPT_BUCKET_NAME:-}
       S3_FPT_PUBLIC_ENDPOINT: ${S3_FPT_PUBLIC_ENDPOINT:-}
+    # Ảnh, video chưa cấu hình S3 thì lưu local: gắn volume để build lại container không mất file.
+    volumes:
+      - catalog_uploads:/data/uploads
 
   event-service:
     build: ./services/event-service
@@ -146,3 +150,4 @@ services:
 volumes:
   redis_data:
   rabbitmq_data:
+  catalog_uploads:

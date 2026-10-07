@@ -33,6 +33,7 @@ import java.util.UUID;
 public class FileStorageService {
 
     private static final Set<String> IMAGE_EXTS = Set.of("jpg", "jpeg", "png", "webp", "gif");
+    private static final Set<String> VIDEO_EXTS = Set.of("mp4", "mov", "m4v", "webm");
 
     private final StorageProperties props;
     private S3Client s3;
@@ -68,6 +69,53 @@ public class FileStorageService {
             log.error("Không lưu được ảnh", e);
             throw new IllegalStateException("Không lưu được ảnh, thử lại sau");
         }
+    }
+
+    /** Lưu video giới thiệu show. Cùng cách với ảnh nhưng giới hạn dung lượng riêng và chỉ nhận định dạng phát được trên điện thoại. */
+    public String storeVideo(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("Chưa chọn video để tải lên");
+        }
+        if (file.getSize() > (long) props.getVideoLimitMb() * 1024 * 1024) {
+            throw new IllegalArgumentException("Video quá lớn, tối đa " + props.getVideoLimitMb() + "MB");
+        }
+        String ext = extensionOf(file.getOriginalFilename());
+        String contentType = file.getContentType() == null ? "" : file.getContentType();
+        if (!VIDEO_EXTS.contains(ext) || !contentType.startsWith("video/")) {
+            throw new IllegalArgumentException("Chỉ nhận video mp4, mov, webm");
+        }
+        String name = UUID.randomUUID() + "." + ext;
+        try {
+            if (props.isS3Configured()) {
+                String key = "videos/" + name;
+                s3Client().putObject(
+                        PutObjectRequest.builder().bucket(props.getBucketName()).key(key).contentType(contentType).build(),
+                        RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
+                return publicUrl(key);
+            }
+            log.warn("S3 chưa cấu hình, lưu video vào thư mục local");
+            Path dir = Paths.get(props.getLocalDir(), "videos");
+            Files.createDirectories(dir);
+            file.transferTo(dir.resolve(name));
+            return props.getPublicBaseUrl().replaceAll("/$", "") + "/api/files/local/" + name;
+        } catch (IOException e) {
+            log.error("Không lưu được video", e);
+            throw new IllegalStateException("Không lưu được video, thử lại sau");
+        }
+    }
+
+    /** Tìm tệp đã lưu local (ảnh hoặc video); null nếu không có hoặc tên không hợp lệ (chặn đường dẫn ../). */
+    public Path findLocal(String name) {
+        if (!name.matches("[A-Za-z0-9._-]+")) {
+            return null;
+        }
+        for (String folder : new String[]{"images", "videos"}) {
+            Path file = Paths.get(props.getLocalDir(), folder, name);
+            if (Files.isRegularFile(file)) {
+                return file;
+            }
+        }
+        return null;
     }
 
     /** Đọc ảnh đã lưu local; null nếu không có hoặc tên không hợp lệ (chặn đường dẫn ../). */

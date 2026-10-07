@@ -106,6 +106,17 @@ public class Event extends BaseEntity {
     @Column(name = "creator_commission_amount")
     private BigDecimal creatorCommissionAmount;
 
+    // Trưng bày công khai: đoàn tự chọn đăng show đã diễn lên bảng tin kèm ảnh, video và mô tả.
+    // Mặc định không hiện, để tên khách và chi tiết riêng tư của show không tự lộ ra ngoài.
+    @Column(name = "showcase_published")
+    private Boolean showcasePublished;
+
+    @Column(name = "showcase_title")
+    private String showcaseTitle;
+
+    @Column(name = "showcase_description", columnDefinition = "TEXT")
+    private String showcaseDescription;
+
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<UserEvent> assignedMembers = new ArrayList<>();

@@ -7,6 +7,10 @@ import org.example.eventplatform.event.client.IdentityServiceClient;
 import org.example.eventplatform.event.entity.Event;
 import org.example.eventplatform.event.entity.EventStatus;
 import org.example.eventplatform.event.entity.EventType;
+import org.example.eventplatform.event.entity.MediaType;
+import org.example.eventplatform.event.entity.ShowMedia;
+import org.example.eventplatform.event.repository.ShowMediaRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.example.eventplatform.event.entity.ShowPackage;
 import org.example.eventplatform.event.repository.EventRepository;
 import org.example.eventplatform.event.repository.ShowPackageRepository;
@@ -37,6 +41,10 @@ public class DemoDataSeeder {
     private record Pack(String name, String description, long price) {
     }
 
+    /** Show đã diễn kèm ảnh để đăng lên bảng tin; tên lấy theo vị trí của đoàn trong DEMO_DOMAINS để các đoàn không trùng tên nhau. */
+    private record Gallery(String theme, EventType type, int dayOffset, String packName, List<String> names, String description) {
+    }
+
     private record Demo(String name, EventType type, int dayOffset, LocalTime start, LocalTime end, EventStatus status,
                         String location, double lat, double lng, long total, long deposit, String customer, String phone,
                         String packName, String note) {
@@ -62,6 +70,33 @@ public class DemoDataSeeder {
             new Demo("Động thổ nhà xưởng Hưng Thịnh", EventType.GROUNDBREAKING, -25, LocalTime.of(8, 0), LocalTime.of(9, 0), EventStatus.COMPLETED,
                     "KCN Quang Minh", 21.1972, 105.7464, 4_500_000, 1_500_000, "Công ty Hưng Thịnh", "0900000106", "Lân sư rồng khai trương", null));
 
+    private static final List<Gallery> GALLERIES = List.of(
+            new Gallery("trungthu", EventType.MID_AUTUMN, -12, "Lân Trung thu cho thiếu nhi", List.of(
+                    "Lân Trung thu Khu phố 7", "Lân Trung thu Chung cư Sunrise", "Lân Trung thu Trường tiểu học Lê Chân",
+                    "Đêm hội Trăng Rằm phường Hải Châu", "Trung thu Làng Hoa Phú Xuân", "Lân Trung thu Công viên Ninh Kiều",
+                    "Lân Trung thu Phố Cổ Hàng Mã", "Đêm Trung thu Nhà văn hoá Chợ Lớn"),
+                    "Lân tương tác cùng các em nhỏ, ông Địa vui nhộn tặng bánh và kẹo giữa sân khu phố. Hơn 200 em thiếu nhi cùng phụ huynh tham gia, tiếng trống rộn ràng suốt buổi tối."),
+            new Gallery("dongtho", EventType.GROUNDBREAKING, -25, "Lân sư rồng khai trương", List.of(
+                    "Động thổ nhà xưởng Hưng Thịnh", "Động thổ dự án Nhà Xanh Bình Thạnh", "Động thổ khu công nghiệp Đình Vũ",
+                    "Động thổ toà nhà văn phòng Sông Hàn", "Động thổ resort Hương Giang", "Động thổ khu dân cư Cái Khế",
+                    "Động thổ trường mầm non Ánh Dương", "Động thổ nhà máy Phú Mỹ"),
+                    "Lân múa chúc khởi công thuận lợi, sau đó chủ đầu tư cùng khách mời thực hiện nghi thức động thổ. Đoàn hoàn thành đúng giờ hoàng đạo theo yêu cầu của gia chủ."),
+            new Gallery("khaitruong", EventType.GRAND_OPENING, -40, "Lân sư rồng khai trương", List.of(
+                    "Khai trương tiệm vàng Kim Ngân", "Khai trương cửa hàng Minh Châu", "Khai trương showroom nội thất An Cư",
+                    "Khai trương nhà hàng Hải Sản Biển Đông", "Khai trương siêu thị mini Phú Gia", "Khai trương phòng khám Tâm Đức",
+                    "Khai trương quán cà phê Nắng Mai", "Khai trương cửa hàng điện máy Thành Công"),
+                    "Hai lân đỏ cùng đội trống bốn người múa chào chủ, hái lộc trước cửa tiệm rồi rải pháo giấy chúc mừng. Hơn một trăm khách và người qua đường dừng lại xem, chủ nhà hài lòng vì không khí rộn ràng đúng giờ đẹp."),
+            new Gallery("damcuoi", EventType.WEDDING, -55, "Lân đơn chúc phúc", List.of(
+                    "Lễ cưới Minh Anh và Quốc Huy", "Lễ cưới Thanh Tâm và Đức Thịnh", "Lễ cưới Hồng Nhung và Văn Dũng",
+                    "Lễ cưới Khánh Linh và Hoàng Nam", "Lễ cưới Thuỳ Dương và Tuấn Kiệt", "Lễ cưới Bảo Ngọc và Gia Huy",
+                    "Lễ cưới Mai Phương và Anh Tú", "Lễ cưới Ngọc Hân và Đình Phong"),
+                    "Cặp lân múa đón dâu rể tại sảnh tiệc, chúc phúc hai họ rồi tặng lộc đầu năm cho cô dâu chú rể. Tiết mục kéo dài khoảng hai mươi phút, được hai bên gia đình khen ngợi."),
+            new Gallery("mungtho", EventType.LONGEVITY_WISH, -68, "Lân đơn chúc phúc", List.of(
+                    "Mừng thọ cụ Lê Văn Bảo 90 tuổi", "Mừng thọ bà Trần Thị Mai 85 tuổi", "Mừng thọ ông Phạm Văn Khôi 88 tuổi",
+                    "Mừng thọ bà Nguyễn Thị Sen 80 tuổi", "Mừng thọ ông Đỗ Văn Tín 90 tuổi", "Mừng thọ cụ Hoàng Thị Lụa 92 tuổi",
+                    "Mừng thọ ông Bùi Quang Vinh 85 tuổi", "Mừng thọ bà Võ Thị Hạnh 88 tuổi"),
+                    "Lân múa chúc thọ trước sân nhà, con cháu quây quần cùng xem. Đoàn mang bộ đồ lân đỏ vàng và nhịp trống nhẹ nhàng, phù hợp với người cao tuổi."));
+
     /** Tên show riêng cho từng đoàn (cùng thứ tự với EVENTS), để danh sách show chung không bị lặp một mẫu. */
     private record Variant(int dayShift, String city, double lat, double lng, List<String> names) {
     }
@@ -84,6 +119,11 @@ public class DemoDataSeeder {
     private final ShowPackageRepository packageRepository;
     private final EventRepository eventRepository;
     private final ShowCodeService showCodeService;
+    private final ShowMediaRepository mediaRepository;
+
+    // Nơi catalog-service phục vụ ảnh minh hoạ demo (chúng được chép sang kho lưu trữ khi catalog khởi động).
+    @Value("${demo.seed.media-base-url:https://muong14.xyz}")
+    private String mediaBaseUrl;
 
     @EventListener(ApplicationReadyEvent.class)
     public void onReady() {
@@ -113,6 +153,7 @@ public class DemoDataSeeder {
                 events += seedEvents(tenantId, domain);
             }
             varyEvents(tenantId, domain);
+            seedGalleries(tenantId, DEMO_DOMAINS.indexOf(domain));
         }
         log.info("Dữ liệu demo: nạp {} gói show, {} show mẫu", packs, events);
     }
@@ -151,6 +192,55 @@ public class DemoDataSeeder {
                     eventRepository.save(event);
                 }
             }
+        }
+    }
+
+    /** Mỗi đoàn có vài show đã diễn kèm hai ảnh và mô tả, đăng sẵn lên bảng tin Khám phá. Chạy lại không tạo trùng. */
+    private void seedGalleries(Long tenantId, int index) {
+        var existing = eventRepository.findByTenantId(tenantId, PageRequest.of(0, 200)).getContent();
+        var packages = packageRepository.findByTenantId(tenantId);
+        var customer = customerClient.findOrCreate(tenantId, "09000002" + String.format("%02d", index), null, "Khách lẻ", null);
+        LocalDate today = LocalDate.now();
+        for (Gallery g : GALLERIES) {
+            String name = g.names().get(index % g.names().size());
+            var same = existing.stream().filter(e -> name.equals(e.getName())).findFirst();
+            if (same.isPresent()) {
+                // Show mẫu cũ trùng tên (do bộ show ban đầu tạo): bật trưng bày cho nó thay vì tạo thêm một show nữa.
+                Event old = same.get();
+                if (!Boolean.TRUE.equals(old.getShowcasePublished()) && old.getStatus() == EventStatus.COMPLETED) {
+                    old.setShowcasePublished(true);
+                    old.setShowcaseTitle(name);
+                    old.setShowcaseDescription(g.description());
+                    eventRepository.save(old);
+                    addGalleryMedia(old.getId(), g.theme());
+                }
+                continue;
+            }
+            var pack = packages.stream().filter(p -> g.packName().equals(p.getName())).findFirst()
+                    .orElse(packages.isEmpty() ? null : packages.get(0));
+            LocalDate date = today.plusDays(g.dayOffset() - index);
+            Event event = Event.builder()
+                    .name(name).type(g.type()).status(EventStatus.COMPLETED)
+                    .eventDate(date).startTime(LocalTime.of(9, 0)).endTime(LocalTime.of(10, 0))
+                    .customerId(customer.id()).tenantId(tenantId)
+                    .totalAmount(pack == null ? BigDecimal.ZERO : pack.getPrice()).platformFee(BigDecimal.ZERO)
+                    .packageId(pack == null ? null : pack.getId()).packageName(pack == null ? null : pack.getName())
+                    .showcasePublished(true).showcaseTitle(name).showcaseDescription(g.description())
+                    .build();
+            showCodeService.assign(event);
+            event = eventRepository.save(event);
+            addGalleryMedia(event.getId(), g.theme());
+        }
+    }
+
+    private void addGalleryMedia(Long eventId, String theme) {
+        if (!mediaRepository.findByEventIdOrderBySortOrderAscIdAsc(eventId).isEmpty()) {
+            return;
+        }
+        for (int i = 1; i <= 2; i++) {
+            mediaRepository.save(ShowMedia.builder().eventId(eventId).type(MediaType.IMAGE)
+                    .url(mediaBaseUrl.replaceAll("/$", "") + "/api/files/local/demo-" + theme + "-" + i + ".jpg")
+                    .sortOrder(i - 1).build());
         }
     }
 

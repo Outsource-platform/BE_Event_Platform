@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.example.eventplatform.event.dto.HomeAppResponse;
 import org.example.eventplatform.event.dto.PublicPackageResponse;
 import org.example.eventplatform.event.dto.PublicShowPage;
+import org.example.eventplatform.event.dto.PublicShowResponse;
 import org.example.eventplatform.event.dto.PublicTroupeResponse;
 import org.example.eventplatform.event.service.PublicCatalogService;
 import org.springframework.http.CacheControl;
@@ -51,6 +52,11 @@ public class PublicCatalogController {
     public ResponseEntity<PublicShowPage> listShows(@RequestParam(defaultValue = "0") int page,
                                                     @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok().cacheControl(CACHE).body(publicCatalogService.listShows(page, size));
+    }
+
+    @GetMapping("/shows/{id}")
+    public ResponseEntity<PublicShowResponse> getShow(@PathVariable Long id) {
+        return ResponseEntity.ok().cacheControl(CACHE).body(publicCatalogService.getShow(id));
     }
 
     @GetMapping("/packages")

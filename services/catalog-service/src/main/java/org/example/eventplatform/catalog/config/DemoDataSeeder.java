@@ -7,6 +7,9 @@ import org.example.eventplatform.catalog.entity.Post;
 import org.example.eventplatform.catalog.entity.PostStatus;
 import org.example.eventplatform.catalog.repository.BannerRepository;
 import org.example.eventplatform.catalog.repository.PostRepository;
+import org.example.eventplatform.catalog.storage.StorageProperties;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -14,8 +17,15 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Banner trang chủ và bài viết mẫu về múa lân sư rồng để có nội dung đẹp khi giới thiệu app.
@@ -34,12 +44,68 @@ public class DemoDataSeeder implements ApplicationRunner {
 
     private final BannerRepository bannerRepository;
     private final PostRepository postRepository;
+    private final StorageProperties storage;
+
+    // Ảnh minh hoạ tự vẽ (không phải ảnh thật): ghép tiêu đề banner và bài viết với tệp trong resources/demo-media.
+    private static final Map<String, String> BANNER_IMAGES = Map.of(
+            FIRST_BANNER, "demo-banner-tet",
+            "Khai trương hồng phát", "demo-banner-khaitruong",
+            "Trung thu rộn ràng", "demo-banner-trungthu",
+            "Đặt show chỉ vài chạm", "demo-banner-datshow");
+    private static final Map<String, String> POST_IMAGES = Map.of(
+            FIRST_POST_SLUG, "demo-lehoi-1",
+            "cach-chon-doan-lan-cho-le-khai-truong", "demo-khaitruong-1",
+            "quy-trinh-dat-show-lan-su-rong-tren-stagio", "demo-damcuoi-2",
+            "phan-mem-quan-ly-doan-lan-stagio", "demo-mungtho-1",
+            "mua-lan-trung-thu-chuan-bi-gi", "demo-trungthu-1");
 
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
+        copyDemoMedia();
         seedBanners();
         seedPosts();
+        applyImages();
+    }
+
+    /** Chép ảnh minh hoạ trong jar ra thư mục lưu trữ để phục vụ qua /api/files/local. Không ghi đè tệp đã có. */
+    private void copyDemoMedia() {
+        try {
+            Path dir = Paths.get(storage.getLocalDir(), "images");
+            Files.createDirectories(dir);
+            for (Resource res : new PathMatchingResourcePatternResolver().getResources("classpath:demo-media/*.jpg")) {
+                Path target = dir.resolve(res.getFilename());
+                if (!Files.exists(target)) {
+                    try (InputStream in = res.getInputStream()) {
+                        Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            log.warn("Không chép được ảnh minh hoạ demo", e);
+        }
+    }
+
+    private String mediaUrl(String name) {
+        return storage.getPublicBaseUrl().replaceAll("/$", "") + "/api/files/local/" + name + ".jpg";
+    }
+
+    /** Gắn ảnh cho banner và bài viết demo còn thiếu ảnh; ảnh người dùng đã tải lên không bị đè. */
+    private void applyImages() {
+        for (Banner banner : bannerRepository.findAll()) {
+            String image = BANNER_IMAGES.get(banner.getTitle());
+            if (image != null && (banner.getImageUrl() == null || banner.getImageUrl().isBlank())) {
+                banner.setImageUrl(mediaUrl(image));
+                bannerRepository.save(banner);
+            }
+        }
+        for (Post post : postRepository.findAll()) {
+            String image = POST_IMAGES.get(post.getSlug());
+            if (image != null && (post.getCoverImage() == null || post.getCoverImage().isBlank())) {
+                post.setCoverImage(mediaUrl(image));
+                postRepository.save(post);
+            }
+        }
     }
 
     private void seedBanners() {

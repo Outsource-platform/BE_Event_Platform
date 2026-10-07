@@ -23,6 +23,8 @@ public class StorageProperties {
     private String publicEndpoint;
     @Value("${fpt-s3.limit-size-mb:10}")
     private int limitSizeMb;
+    @Value("${upload.video-limit-mb:100}")
+    private int videoLimitMb;
     @Value("${upload.local-dir:uploads}")
     private String localDir;
     @Value("${upload.public-base-url:}")

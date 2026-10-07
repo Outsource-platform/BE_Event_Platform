@@ -8,10 +8,14 @@ import org.example.eventplatform.event.dto.PlaceResponse;
 import org.example.eventplatform.event.dto.PublicPackageResponse;
 import org.example.eventplatform.event.dto.PublicShowPage;
 import org.example.eventplatform.event.dto.PublicShowResponse;
+import org.example.eventplatform.event.dto.MediaDto;
 import org.example.eventplatform.event.dto.PublicTroupeResponse;
+import org.example.eventplatform.event.entity.Event;
 import org.example.eventplatform.event.entity.EventStatus;
+import org.example.eventplatform.event.entity.ShowMedia;
 import org.example.eventplatform.event.entity.ShowPackage;
 import org.example.eventplatform.event.repository.EventRepository;
+import org.example.eventplatform.event.repository.ShowMediaRepository;
 import org.example.eventplatform.event.repository.ShowPackageRepository;
 import org.example.eventplatform.shared.cache.TtlCache;
 import org.springframework.data.domain.PageRequest;
@@ -46,6 +50,7 @@ public class PublicCatalogService {
             List.of(EventStatus.SCHEDULED, EventStatus.CONFIRMED, EventStatus.IN_PROGRESS, EventStatus.COMPLETED);
 
     private final EventRepository eventRepository;
+    private final ShowMediaRepository showMediaRepository;
     private final ShowPackageRepository showPackageRepository;
     private final IdentityServiceClient identityServiceClient;
     private final CatalogServiceClient catalogServiceClient;
@@ -62,29 +67,56 @@ public class PublicCatalogService {
                 .toList();
     }
 
-    /** Mọi show đã chốt hoặc đã diễn của các đoàn đang hoạt động, mới nhất trước, không giới hạn theo tháng. */
+    /** Bảng tin Khám phá: các show đoàn đã đăng trưng bày, mới nhất trước, không giới hạn theo tháng. */
     @Transactional(readOnly = true)
     public PublicShowPage listShows(int page, int size) {
-        Map<Long, IdentityServiceClient.PublicTenant> tenants = identityServiceClient.findPublicTenants().stream()
-                .collect(Collectors.toMap(IdentityServiceClient.PublicTenant::id, t -> t, (a, b) -> a));
+        Map<Long, IdentityServiceClient.PublicTenant> tenants = publicTenantsById();
         if (tenants.isEmpty()) {
             return new PublicShowPage(List.of(), 0, size, 0, 0);
         }
-        var result = eventRepository.findByStatusInAndTenantIdIn(PUBLIC_SHOW_STATUSES, tenants.keySet(),
+        var result = eventRepository.findByShowcasePublishedTrueAndStatusInAndTenantIdIn(PUBLIC_SHOW_STATUSES, tenants.keySet(),
                 PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 50),
                         Sort.by(Sort.Direction.DESC, "eventDate").and(Sort.by(Sort.Direction.DESC, "id"))));
-        List<PublicShowResponse> items = result.getContent().stream().map(e -> {
+        return new PublicShowPage(toShowResponses(result.getContent(), tenants), result.getNumber(), result.getSize(),
+                result.getTotalElements(), result.getTotalPages());
+    }
+
+    @Transactional(readOnly = true)
+    public PublicShowResponse getShow(Long id) {
+        Map<Long, IdentityServiceClient.PublicTenant> tenants = publicTenantsById();
+        var event = eventRepository.findById(id)
+                .filter(e -> Boolean.TRUE.equals(e.getShowcasePublished()) && PUBLIC_SHOW_STATUSES.contains(e.getStatus())
+                        && tenants.containsKey(e.getTenantId()))
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy show này"));
+        return toShowResponses(List.of(event), tenants).get(0);
+    }
+
+    private List<PublicShowResponse> toShowResponses(List<Event> events, Map<Long, IdentityServiceClient.PublicTenant> tenants) {
+        List<Long> ids = events.stream().map(Event::getId).toList();
+        Map<Long, List<MediaDto>> media = ids.isEmpty() ? Map.of()
+                : showMediaRepository.findByEventIdInOrderBySortOrderAscIdAsc(ids).stream()
+                        .collect(Collectors.groupingBy(ShowMedia::getEventId,
+                                Collectors.mapping(m -> new MediaDto(m.getType().name(), m.getUrl()), Collectors.toList())));
+        Map<Long, ShowPackage> packages = showPackageRepository.findAllById(
+                events.stream().map(Event::getPackageId).filter(Objects::nonNull).distinct().toList())
+                .stream().collect(Collectors.toMap(ShowPackage::getId, p -> p));
+        return events.stream().map(e -> {
             IdentityServiceClient.PublicTenant t = tenants.get(e.getTenantId());
+            ShowPackage pack = e.getPackageId() == null ? null : packages.get(e.getPackageId());
             return PublicShowResponse.builder()
-                    .id(e.getId()).name(e.getName())
+                    .id(e.getId())
+                    .title(e.getShowcaseTitle() != null ? e.getShowcaseTitle() : e.getName())
+                    .description(e.getShowcaseDescription())
                     .type(e.getType() == null ? null : e.getType().getDisplayName())
                     .status(e.getStatus().name())
                     .eventDate(e.getEventDate()).startTime(e.getStartTime())
-                    .packageName(e.getPackageName())
+                    .media(media.getOrDefault(e.getId(), List.of()))
+                    .showPackage(pack == null ? null : PublicPackageResponse.builder()
+                            .id(pack.getId()).name(pack.getName()).description(pack.getDescription()).price(pack.getPrice())
+                            .troupeId(t.id()).troupeName(t.name()).troupeLogo(t.logo()).build())
                     .troupeId(t.id()).troupeName(t.name()).troupeLogo(t.logo()).province(t.province())
                     .build();
         }).toList();
-        return new PublicShowPage(items, result.getNumber(), result.getSize(), result.getTotalElements(), result.getTotalPages());
     }
 
     @Transactional(readOnly = true)

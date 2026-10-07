@@ -4,20 +4,23 @@ import lombok.Builder;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 /**
- * Show hiển thị công khai trên mục Khám phá. Cố ý không có địa chỉ, khách hàng, số tiền hay mã show:
- * khách vãng lai chỉ cần thấy đoàn nào đang hoạt động và diễn những dịp gì.
+ * Show trưng bày công khai trên bảng tin Khám phá. Cố ý không có địa chỉ, khách hàng, số tiền hay mã show:
+ * khách vãng lai chỉ cần thấy đoàn đã diễn gì, trông thế nào và dùng gói nào.
  */
 @Builder
 public record PublicShowResponse(
         Long id,
-        String name,
+        String title,
+        String description,
         String type,
         String status,
         LocalDate eventDate,
         LocalTime startTime,
-        String packageName,
+        List<MediaDto> media,
+        PublicPackageResponse showPackage,
         Long troupeId,
         String troupeName,
         String troupeLogo,
