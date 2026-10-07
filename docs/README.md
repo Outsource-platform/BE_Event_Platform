@@ -16,3 +16,5 @@ Chạy `scripts/sync-agent-rules.sh` sau khi sửa `rules/*.md`. Script ghi vào
 - `.cursor/rules/stagio.mdc` (`alwaysApply`): Cursor.
 
 Chỉ sửa ở `docs/rules/`, không sửa tay các file sinh ra vì lần đồng bộ sau sẽ ghi đè khối của mình (phần khác trong `AGENTS.md`, như khối Next.js tự sinh, vẫn được giữ).
+
+`PLAN.md`, `AGENTS.md`, `CLAUDE.md`, `.claude/` và `.cursor/` **không đưa lên git**. Ba repo đã ignore các đường này. `docs/rules/` vẫn commit được.

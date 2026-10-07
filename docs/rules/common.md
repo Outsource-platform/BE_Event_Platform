@@ -19,6 +19,7 @@
 - Nhánh theo mục 3 của PLAN.md. App: `release/v1-lan-su-rong` là bản **đang thử nghiệm trên Google Play, đóng băng**, chỉ sửa lỗi bắt buộc; mọi tính năng mới làm ở `release/v1.1-bang-tin`. Trước khi sửa hoặc build, chạy `git branch --show-current`.
 - Commit nhỏ, mỗi commit một ý, thông điệp tiếng Việt nêu việc và lý do. Chỉ `git add` đúng file của mình; **không `git add -A`** khi cây làm việc còn việc chưa commit của người khác.
 - **Không push, không force-push, không viết lại lịch sử** nếu anh Nghĩa chưa bảo.
+- **Không commit, không đẩy** `CLAUDE.md`, `AGENTS.md`, `PLAN.md` (kể cả `docs/PLAN.md`), `.claude/` và `.cursor/`. Giữ trên máy. Quy tắc gốc trong `docs/rules/` vẫn commit được.
 - AI (Claude) thêm dòng `Co-Authored-By: Claude <noreply@anthropic.com>` ở cuối thông điệp commit. Cursor và người thì không cần.
 - File sinh tự động (`generated_plugin_registrant`, `pubspec.lock`, `package-lock.json`) chỉ commit khi thêm/bỏ thư viện.
 
