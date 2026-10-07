@@ -207,6 +207,15 @@ public class DemoDataSeeder {
             if (same.isPresent()) {
                 // Show mẫu cũ trùng tên (do bộ show ban đầu tạo): bật trưng bày cho nó thay vì tạo thêm một show nữa.
                 Event old = same.get();
+                if (old.getStatus() == EventStatus.COMPLETED && Boolean.TRUE.equals(old.getShowcasePublished())) {
+                    // Show trưng bày demo: ngày tính theo hôm nay và theo vị trí của đoàn để bảng tin luôn "vừa diễn" và xen kẽ các dịp.
+                    LocalDate wanted = today.plusDays(g.dayOffset() - index * 4L);
+                    if (!wanted.equals(old.getEventDate())) {
+                        old.setEventDate(wanted);
+                        eventRepository.save(old);
+                    }
+                    ensureVideo(old.getId(), g.theme());
+                }
                 if (!Boolean.TRUE.equals(old.getShowcasePublished()) && old.getStatus() == EventStatus.COMPLETED) {
                     if (old.getPackageId() == null) {
                         packages.stream().filter(p -> g.packName().equals(p.getName())).findFirst().ifPresent(p -> {
@@ -224,7 +233,7 @@ public class DemoDataSeeder {
             }
             var pack = packages.stream().filter(p -> g.packName().equals(p.getName())).findFirst()
                     .orElse(packages.isEmpty() ? null : packages.get(0));
-            LocalDate date = today.plusDays(g.dayOffset() - index);
+            LocalDate date = today.plusDays(g.dayOffset() - index * 4L);
             Event event = Event.builder()
                     .name(name).type(g.type()).status(EventStatus.COMPLETED)
                     .eventDate(date).startTime(LocalTime.of(9, 0)).endTime(LocalTime.of(10, 0))
@@ -236,7 +245,22 @@ public class DemoDataSeeder {
             showCodeService.assign(event);
             event = eventRepository.save(event);
             addGalleryMedia(event.getId(), g.theme());
+            ensureVideo(event.getId(), g.theme());
         }
+    }
+
+    /** Một dịp (khai trương) có thêm video mẫu để thử trình phát; các dịp khác chỉ có ảnh. */
+    private void ensureVideo(Long eventId, String theme) {
+        if (!"khaitruong".equals(theme)) {
+            return;
+        }
+        var media = mediaRepository.findByEventIdOrderBySortOrderAscIdAsc(eventId);
+        if (media.stream().anyMatch(m -> m.getType() == MediaType.VIDEO)) {
+            return;
+        }
+        mediaRepository.save(ShowMedia.builder().eventId(eventId).type(MediaType.VIDEO)
+                .url(mediaBaseUrl.replaceAll("/$", "") + "/api/files/local/demo-video-1.mp4")
+                .sortOrder(media.size()).build());
     }
 
     private void addGalleryMedia(Long eventId, String theme) {

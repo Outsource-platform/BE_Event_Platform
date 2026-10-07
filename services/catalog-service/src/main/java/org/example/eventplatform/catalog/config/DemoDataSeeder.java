@@ -81,6 +81,16 @@ public class DemoDataSeeder implements ApplicationRunner {
                     }
                 }
             }
+            Path videos = Paths.get(storage.getLocalDir(), "videos");
+            Files.createDirectories(videos);
+            for (Resource res : new PathMatchingResourcePatternResolver().getResources("classpath:demo-media/*.mp4")) {
+                Path target = videos.resolve(res.getFilename());
+                if (!Files.exists(target)) {
+                    try (InputStream in = res.getInputStream()) {
+                        Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
+                    }
+                }
+            }
         } catch (IOException e) {
             log.warn("Không chép được ảnh minh hoạ demo", e);
         }
