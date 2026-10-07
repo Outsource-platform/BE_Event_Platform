@@ -81,17 +81,17 @@ public class DemoDataSeeder {
                     "Động thổ toà nhà văn phòng Sông Hàn", "Động thổ resort Hương Giang", "Động thổ khu dân cư Cái Khế",
                     "Động thổ trường mầm non Ánh Dương", "Động thổ nhà máy Phú Mỹ"),
                     "Lân múa chúc khởi công thuận lợi, sau đó chủ đầu tư cùng khách mời thực hiện nghi thức động thổ. Đoàn hoàn thành đúng giờ hoàng đạo theo yêu cầu của gia chủ."),
-            new Gallery("khaitruong", EventType.GRAND_OPENING, -40, "Lân sư rồng khai trương", List.of(
+            new Gallery("khaitruong", EventType.GRAND_OPENING, -4, "Lân sư rồng khai trương", List.of(
                     "Khai trương tiệm vàng Kim Ngân", "Khai trương cửa hàng Minh Châu", "Khai trương showroom nội thất An Cư",
                     "Khai trương nhà hàng Hải Sản Biển Đông", "Khai trương siêu thị mini Phú Gia", "Khai trương phòng khám Tâm Đức",
                     "Khai trương quán cà phê Nắng Mai", "Khai trương cửa hàng điện máy Thành Công"),
                     "Hai lân đỏ cùng đội trống bốn người múa chào chủ, hái lộc trước cửa tiệm rồi rải pháo giấy chúc mừng. Hơn một trăm khách và người qua đường dừng lại xem, chủ nhà hài lòng vì không khí rộn ràng đúng giờ đẹp."),
-            new Gallery("damcuoi", EventType.WEDDING, -55, "Lân đơn chúc phúc", List.of(
+            new Gallery("damcuoi", EventType.WEDDING, -40, "Lân đơn chúc phúc", List.of(
                     "Lễ cưới Minh Anh và Quốc Huy", "Lễ cưới Thanh Tâm và Đức Thịnh", "Lễ cưới Hồng Nhung và Văn Dũng",
                     "Lễ cưới Khánh Linh và Hoàng Nam", "Lễ cưới Thuỳ Dương và Tuấn Kiệt", "Lễ cưới Bảo Ngọc và Gia Huy",
                     "Lễ cưới Mai Phương và Anh Tú", "Lễ cưới Ngọc Hân và Đình Phong"),
                     "Cặp lân múa đón dâu rể tại sảnh tiệc, chúc phúc hai họ rồi tặng lộc đầu năm cho cô dâu chú rể. Tiết mục kéo dài khoảng hai mươi phút, được hai bên gia đình khen ngợi."),
-            new Gallery("mungtho", EventType.LONGEVITY_WISH, -68, "Lân đơn chúc phúc", List.of(
+            new Gallery("mungtho", EventType.LONGEVITY_WISH, -55, "Lân đơn chúc phúc", List.of(
                     "Mừng thọ cụ Lê Văn Bảo 90 tuổi", "Mừng thọ bà Trần Thị Mai 85 tuổi", "Mừng thọ ông Phạm Văn Khôi 88 tuổi",
                     "Mừng thọ bà Nguyễn Thị Sen 80 tuổi", "Mừng thọ ông Đỗ Văn Tín 90 tuổi", "Mừng thọ cụ Hoàng Thị Lụa 92 tuổi",
                     "Mừng thọ ông Bùi Quang Vinh 85 tuổi", "Mừng thọ bà Võ Thị Hạnh 88 tuổi"),
@@ -209,7 +209,7 @@ public class DemoDataSeeder {
                 Event old = same.get();
                 if (old.getStatus() == EventStatus.COMPLETED && Boolean.TRUE.equals(old.getShowcasePublished())) {
                     // Show trưng bày demo: ngày tính theo hôm nay và theo vị trí của đoàn để bảng tin luôn "vừa diễn" và xen kẽ các dịp.
-                    LocalDate wanted = today.plusDays(g.dayOffset() - index * 4L);
+                    LocalDate wanted = today.plusDays(g.dayOffset() - index * 3L);
                     if (!wanted.equals(old.getEventDate())) {
                         old.setEventDate(wanted);
                         eventRepository.save(old);
@@ -233,7 +233,7 @@ public class DemoDataSeeder {
             }
             var pack = packages.stream().filter(p -> g.packName().equals(p.getName())).findFirst()
                     .orElse(packages.isEmpty() ? null : packages.get(0));
-            LocalDate date = today.plusDays(g.dayOffset() - index * 4L);
+            LocalDate date = today.plusDays(g.dayOffset() - index * 3L);
             Event event = Event.builder()
                     .name(name).type(g.type()).status(EventStatus.COMPLETED)
                     .eventDate(date).startTime(LocalTime.of(9, 0)).endTime(LocalTime.of(10, 0))
