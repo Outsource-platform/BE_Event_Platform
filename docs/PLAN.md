@@ -1,6 +1,6 @@
 # Stagio — Kế hoạch và tiến độ (tài liệu sống)
 
-> **Cập nhật lần cuối:** 2026-10-07 · bởi Claude Code
+> **Cập nhật lần cuối:** 2026-10-07 · bởi Cursor
 > **Bản gốc duy nhất của file này:** `event-platform/docs/PLAN.md` (repo BE_Event_Platform, nhánh `master`).
 > Các repo khác chỉ trỏ về đây, không giữ bản sao. Quy tắc làm việc ở `docs/rules/` (được đồng bộ sang từng repo thành `AGENTS.md` và `.cursor/rules/stagio.mdc`).
 
@@ -14,7 +14,7 @@
 
 1. [ ] **Thử đầu cuối các luồng chưa kiểm tra** bằng tài khoản demo (xem `DEMO-ACCOUNTS.txt` ở `/Users/macos/Desktop/SaaS/`, không commit): đoàn đăng ảnh/video lên Khám phá, nén video và WebP, khách viết đánh giá, chat khách ↔ trưởng đoàn. Ghi kết quả vào mục 8.
 2. [ ] **Tìm nguyên nhân thông báo đỏ "Không có quyền truy cập" (403) hiện ngay sau đăng nhập** (cả admin đoàn lẫn thành viên). Bật Dev (chạm 10 lần chân trang đăng nhập), mở con bọ debug, lấy đường dẫn bị 403. Xem mục 6.
-3. [ ] **Push hai nhánh app** (`release/v1-lan-su-rong`, `release/v1.1-bang-tin`) lên GitHub khi anh Nghĩa đồng ý.
+3. [x] ~~Push hai nhánh app và backend, web lên GitHub~~ (xong 2026-10-07).
 4. [ ] **Trang chi tiết đoàn**: ảnh bìa đoàn, dải show đã diễn của đoàn, điểm đánh giá của đoàn.
 5. [ ] **Dựng production trên VPS FPT** (mục 5, Phase C) khi anh Nghĩa đưa IP, khoá SSH, tên miền và giá trị `.env`.
 
@@ -24,9 +24,7 @@ _Không có việc dở. Người dừng giữa chừng phải ghi vào đây: v
 
 ### 0.3 Cần anh Nghĩa quyết
 
-- Ai được viết đánh giá show: hiện **mọi khách đã đăng nhập**. Chỉ cho khách từng thuê đoàn được không?
-- "Vị trí" của show liên quan: hiện theo **tỉnh/thành** của đoàn. Muốn theo khoảng cách thật từ toạ độ show không?
-- Hạn mức đẩy tin: hiện **3 lượt / 24 giờ / đoàn**. Có gắn theo gói thuê bao sau này không?
+- Hạn mức đẩy tin theo gói thuê bao: **bỏ ngỏ đến sau debut**. Mặc định vẫn 3 lượt / 24 giờ / đoàn. Chưa quyết có gắn theo gói hay không.
 
 ---
 
@@ -80,8 +78,8 @@ Ký hiệu: ✅ xong và đã kiểm tra · 🟡 xong nhưng **chưa kiểm tra 
 | Tải ảnh/video: S3 FPT hoặc thư mục local (volume `catalog_uploads`), Range cho video | ✅ |
 | **Nén video H.264 ~720p nền, ảnh → WebP** bằng ffmpeg trong container catalog | 🟡 lệnh ffmpeg đã thử trong container, luồng tải lên thật chưa thử |
 | Show trưng bày: tiêu đề, mô tả, tối đa 10 mục (1 video đứng đầu + ảnh), cờ hiện công khai | ✅ API · 🟡 luồng app |
-| Bảng tin công khai, chi tiết show có **gói của đoàn kèm `selected`**, **show liên quan** (±30% giá, cùng tỉnh) | ✅ |
-| **Đánh giá show** (1 khách 1 đánh giá, tên che `Ngu***`) | ✅ đọc · 🟡 ghi |
+| Bảng tin công khai, chi tiết show có **gói của đoàn kèm `selected`**, **show liên quan** (±30% giá, cùng tỉnh; **chưa lọc phường** như quyết định 07/10) | 🟡 |
+| **Đánh giá show** (1 khách 1 đánh giá, tên che `Ngu***`). Quyền ghi đã chốt 07/10 nhưng code vẫn cho mọi khách đăng nhập | ✅ đọc · 🟡 ghi · ⛔ chưa siết quyền |
 | **Chat khách ↔ trưởng đoàn** gắn show, thông báo FCM | 🟡 |
 | Dữ liệu demo (8 đoàn, gói, show, banner, bài, đánh giá, ảnh/video minh hoạ) bật bằng `DEMO_SEED_ENABLED` | ✅ trên server dev |
 | **Thuê bao** (gói, dùng thử, thanh toán chuyển khoản, chặn 402 ở gateway) | ⛔ |
@@ -118,6 +116,8 @@ Ký hiệu: ✅ xong và đã kiểm tra · 🟡 xong nhưng **chưa kiểm tra 
 
 ### Phase B — Hoàn thiện bản 1.1 (nhánh `v1.1-bang-tin`)
 - [x] Bảng tin show, chi tiết show, đánh giá, show liên quan, chat, đẩy tin, thanh nút cố định.
+- [ ] Siết quyền đánh giá: chỉ khách đã dùng đúng show đó và đã từng dùng show của đơn vị đó.
+- [ ] Show liên quan lọc thêm **cùng phường** (hiện chỉ cùng tỉnh), giữ ±30% giá và tối đa 6.
 - [ ] Thử đầu cuối các luồng 🟡 ở mục 4 trên iOS **và Android thật**.
 - [ ] Trang chi tiết đoàn đẹp hơn (ảnh bìa, show đã diễn, điểm đánh giá).
 - [ ] Bấm thông báo chat mở đúng cuộc trò chuyện; chat gửi ảnh.
@@ -172,15 +172,17 @@ Ký hiệu: ✅ xong và đã kiểm tra · 🟡 xong nhưng **chưa kiểm tra 
 5. Tin tức là **tính năng phụ**; trang chủ app là bảng tin show.
 6. Show chỉ lên Khám phá khi **đoàn chủ động đăng**; mặc định không hiện. API công khai **không** trả địa chỉ, khách, số tiền, mã show.
 7. Mỗi show tối đa **10 mục: 1 video và 9 ảnh, hoặc 10 ảnh**, video luôn đứng đầu. Video nén phía server; ảnh chuyển WebP.
-8. Show liên quan: giá gói trong **±30%** và **cùng tỉnh/thành**, tối đa 6.
-9. Đẩy tin: **3 lượt/24 giờ/đoàn**, mỗi bài chỉ đẩy lại sau 24 giờ.
-10. Bảng tin và trang chi tiết lấy dữ liệu công khai, không cần đăng nhập; chat và đánh giá cần đăng nhập khách.
+8. Show liên quan: giá gói trong **±30%**, **cùng tỉnh/thành và cùng phường** của đoàn, tối đa 6. Không dùng khoảng cách từ toạ độ show.
+9. Đẩy tin: mặc định **3 lượt/24 giờ/đoàn**, mỗi bài chỉ đẩy lại sau 24 giờ. Gắn hạn mức theo gói thuê bao **để sau debut, chưa chốt**.
+10. Bảng tin và trang chi tiết lấy dữ liệu công khai, không cần đăng nhập. Chat cần đăng nhập khách. Đánh giá chỉ cho khách **đã dùng đúng show đó và đã từng dùng show của đơn vị đó** (đăng nhập thôi thì không đủ).
 11. Biểu mẫu trong app dùng **bottom sheet**, không dùng hộp thoại giữa màn.
 12. Không thêm thư viện nặng vào app khi chưa cân nhắc dung lượng (đích ~24MB).
 13. Chỉ thao tác trong `~/BE_Event_Platform` trên server dùng chung; không đụng project khác.
 
 ## 8. Nhật ký tiến độ (mới nhất trên cùng)
 
+- **2026-10-07** · Chốt: đánh giá chỉ cho khách đã dùng đúng show và đã từng dùng show của đơn vị; show liên quan theo tỉnh và phường; đẩy tin giữ 3/24h, gắn gói thuê bao bỏ ngỏ sau debut. Chưa sửa code.
+- **2026-10-07** · Push lên GitHub: backend `master`, web `main`, app `release/v1-lan-su-rong` và `release/v1.1-bang-tin` (không force).
 - **2026-10-07** · Lập bản kế hoạch và quy tắc chung này; đồng bộ sang 3 repo (`AGENTS.md`, `CLAUDE.md`, `.cursor/rules/stagio.mdc`). Archive kế hoạch cũ 17/9.
 - **2026-10-07** · Chi tiết show: gói của đoàn (gói đã dùng đậm), đánh giá, show liên quan, Chat + Đặt show cạnh nhau; media tối đa 10 (1 video đứng đầu); nén video và WebP bằng ffmpeg. Backend commit `master`; app commit `2982c81` trên `release/v1.1-bang-tin`.
 - **2026-10-07** · Chat khách ↔ trưởng đoàn, trang chủ sắp lại (khu vực + đơn vị lên đầu, bỏ mục gói), thanh nút cố định ở chi tiết show.
