@@ -62,6 +62,18 @@ public class DemoDataSeeder {
             new Demo("Động thổ nhà xưởng Hưng Thịnh", EventType.GROUNDBREAKING, -25, LocalTime.of(8, 0), LocalTime.of(9, 0), EventStatus.COMPLETED,
                     "KCN Quang Minh", 21.1972, 105.7464, 4_500_000, 1_500_000, "Công ty Hưng Thịnh", "0900000106", "Lân sư rồng khai trương", null));
 
+    /** Tên show riêng cho từng đoàn (cùng thứ tự với EVENTS), để danh sách show chung không bị lặp một mẫu. */
+    private record Variant(int dayShift, String city, double lat, double lng, List<String> names) {
+    }
+
+    private static final Map<String, Variant> VARIANTS = Map.of(
+            "langiaphat", new Variant(2, "TP. Hồ Chí Minh", 10.7725, 106.6980, List.of(
+                    "Khai trương showroom nội thất An Cư", "Lễ cưới Thanh Tâm và Đức Thịnh", "Mừng thọ bà Trần Thị Mai 85 tuổi",
+                    "Khai mạc lễ hội Xuân Phố Đi Bộ", "Lân Trung thu Chung cư Sunrise", "Động thổ dự án Nhà Xanh Bình Thạnh")),
+            "lanlongvan", new Variant(4, "Hải Phòng", 20.8449, 106.6881, List.of(
+                    "Khai trương nhà hàng Hải Sản Biển Đông", "Lễ cưới Hồng Nhung và Văn Dũng", "Mừng thọ ông Phạm Văn Khôi 88 tuổi",
+                    "Lễ hội Hoa Phượng Đỏ", "Lân Trung thu Trường tiểu học Lê Chân", "Động thổ khu công nghiệp Đình Vũ")));
+
     // Khớp danh sách đơn vị do identity-service nạp; chỉ ba đoàn đầu có thêm show mẫu.
     private static final List<String> DEMO_DOMAINS = List.of("landainam", "lanthanglong", "langiaphat", "lankimlong",
             "lanlongvan", "lanhaichau", "lancodohue", "lantaydo");
@@ -100,6 +112,7 @@ public class DemoDataSeeder {
             if (SHOWCASE.contains(domain) && !eventRepository.findByTenantId(tenantId, PageRequest.of(0, 1)).hasContent()) {
                 events += seedEvents(tenantId, domain);
             }
+            varyEvents(tenantId, domain);
         }
         log.info("Dữ liệu demo: nạp {} gói show, {} show mẫu", packs, events);
     }
@@ -118,6 +131,27 @@ public class DemoDataSeeder {
             count++;
         }
         return count;
+    }
+
+    /** Đổi tên, ngày và địa điểm của show mẫu còn mang tên mẫu gốc sang bản riêng của đoàn; chạy lại thì không còn gì để đổi. */
+    private void varyEvents(Long tenantId, String domain) {
+        Variant variant = VARIANTS.get(domain);
+        if (variant == null) {
+            return;
+        }
+        var page = eventRepository.findByTenantId(tenantId, PageRequest.of(0, 100));
+        for (Event event : page.getContent()) {
+            for (int i = 0; i < EVENTS.size(); i++) {
+                if (EVENTS.get(i).name().equals(event.getName())) {
+                    event.setName(variant.names().get(i));
+                    event.setEventDate(event.getEventDate().plusDays(variant.dayShift()));
+                    event.setLocation(variant.city());
+                    event.setVenueLat(variant.lat());
+                    event.setVenueLng(variant.lng());
+                    eventRepository.save(event);
+                }
+            }
+        }
     }
 
     private int seedEvents(Long tenantId, String domain) {
