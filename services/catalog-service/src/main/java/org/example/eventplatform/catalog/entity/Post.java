@@ -61,4 +61,7 @@ public class Post extends BaseEntity {
     private PostStatus status = PostStatus.DRAFT;
 
     private LocalDateTime publishedAt;
+
+    // Lần "đẩy tin" gần nhất: danh sách công khai xếp theo mốc này (nếu có) thay vì ngày đăng.
+    private LocalDateTime pushedAt;
 }

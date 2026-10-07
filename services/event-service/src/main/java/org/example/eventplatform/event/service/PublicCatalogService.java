@@ -6,10 +6,16 @@ import org.example.eventplatform.event.client.IdentityServiceClient;
 import org.example.eventplatform.event.dto.HomeAppResponse;
 import org.example.eventplatform.event.dto.PlaceResponse;
 import org.example.eventplatform.event.dto.PublicPackageResponse;
+import org.example.eventplatform.event.dto.PublicShowPage;
+import org.example.eventplatform.event.dto.PublicShowResponse;
 import org.example.eventplatform.event.dto.PublicTroupeResponse;
+import org.example.eventplatform.event.entity.EventStatus;
 import org.example.eventplatform.event.entity.ShowPackage;
+import org.example.eventplatform.event.repository.EventRepository;
 import org.example.eventplatform.event.repository.ShowPackageRepository;
 import org.example.eventplatform.shared.cache.TtlCache;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +42,10 @@ public class PublicCatalogService {
 
     private static final int FEATURED_LIMIT = 10;
 
+    private static final List<EventStatus> PUBLIC_SHOW_STATUSES =
+            List.of(EventStatus.SCHEDULED, EventStatus.CONFIRMED, EventStatus.IN_PROGRESS, EventStatus.COMPLETED);
+
+    private final EventRepository eventRepository;
     private final ShowPackageRepository showPackageRepository;
     private final IdentityServiceClient identityServiceClient;
     private final CatalogServiceClient catalogServiceClient;
@@ -50,6 +60,31 @@ public class PublicCatalogService {
                 .filter(t -> sameArea(ward, t.ward()))
                 .map(tenant -> toTroupe(tenant, packagesByTenant.getOrDefault(tenant.id(), List.of()), false))
                 .toList();
+    }
+
+    /** Mọi show đã chốt hoặc đã diễn của các đoàn đang hoạt động, mới nhất trước, không giới hạn theo tháng. */
+    @Transactional(readOnly = true)
+    public PublicShowPage listShows(int page, int size) {
+        Map<Long, IdentityServiceClient.PublicTenant> tenants = identityServiceClient.findPublicTenants().stream()
+                .collect(Collectors.toMap(IdentityServiceClient.PublicTenant::id, t -> t, (a, b) -> a));
+        if (tenants.isEmpty()) {
+            return new PublicShowPage(List.of(), 0, size, 0, 0);
+        }
+        var result = eventRepository.findByStatusInAndTenantIdIn(PUBLIC_SHOW_STATUSES, tenants.keySet(),
+                PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 50),
+                        Sort.by(Sort.Direction.DESC, "eventDate").and(Sort.by(Sort.Direction.DESC, "id"))));
+        List<PublicShowResponse> items = result.getContent().stream().map(e -> {
+            IdentityServiceClient.PublicTenant t = tenants.get(e.getTenantId());
+            return PublicShowResponse.builder()
+                    .id(e.getId()).name(e.getName())
+                    .type(e.getType() == null ? null : e.getType().getDisplayName())
+                    .status(e.getStatus().name())
+                    .eventDate(e.getEventDate()).startTime(e.getStartTime())
+                    .packageName(e.getPackageName())
+                    .troupeId(t.id()).troupeName(t.name()).troupeLogo(t.logo()).province(t.province())
+                    .build();
+        }).toList();
+        return new PublicShowPage(items, result.getNumber(), result.getSize(), result.getTotalElements(), result.getTotalPages());
     }
 
     @Transactional(readOnly = true)

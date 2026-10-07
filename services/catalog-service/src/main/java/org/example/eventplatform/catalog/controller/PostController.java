@@ -7,6 +7,7 @@ import org.example.eventplatform.catalog.dto.PostRequest;
 import org.example.eventplatform.catalog.dto.PostResponse;
 import org.example.eventplatform.catalog.dto.PostStatusRequest;
 import org.example.eventplatform.catalog.dto.PostSummary;
+import org.example.eventplatform.catalog.dto.PushQuota;
 import org.example.eventplatform.catalog.dto.SitemapItem;
 import org.example.eventplatform.catalog.entity.PostStatus;
 import org.example.eventplatform.catalog.service.PostService;
@@ -91,6 +92,18 @@ public class PostController {
     public ResponseEntity<PostResponse> setMineStatus(@AuthenticationPrincipal JwtPrincipal principal,
                                                       @PathVariable Long id, @Valid @RequestBody PostStatusRequest request) {
         return ResponseEntity.ok(postService.setStatus(id, request.getStatus(), principal.tenantId()));
+    }
+
+    @GetMapping("/mine/push-quota")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<PushQuota> pushQuota(@AuthenticationPrincipal JwtPrincipal principal) {
+        return ResponseEntity.ok(postService.pushQuota(principal.tenantId()));
+    }
+
+    @PostMapping("/mine/{id}/push")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<PushQuota> pushMine(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable Long id) {
+        return ResponseEntity.ok(postService.push(id, principal.tenantId()));
     }
 
     @DeleteMapping("/mine/{id}")

@@ -7,14 +7,17 @@ import org.example.eventplatform.catalog.dto.PageResult;
 import org.example.eventplatform.catalog.dto.PostRequest;
 import org.example.eventplatform.catalog.dto.PostResponse;
 import org.example.eventplatform.catalog.dto.PostSummary;
+import org.example.eventplatform.catalog.dto.PushQuota;
 import org.example.eventplatform.catalog.dto.SitemapItem;
 import org.example.eventplatform.catalog.entity.Post;
 import org.example.eventplatform.catalog.entity.PostStatus;
 import org.example.eventplatform.catalog.repository.PostRepository;
 import org.jsoup.Jsoup;
 import org.jsoup.safety.Safelist;
+import org.example.eventplatform.shared.exception.ApiException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +37,8 @@ public class PostService {
 
     private static final Pattern SLUG_FORMAT = Pattern.compile("^[a-z0-9]+(-[a-z0-9]+)*$");
     private static final int MAX_PAGE_SIZE = 50;
+    static final int PUSH_LIMIT = 3;
+    static final int PUSH_WINDOW_HOURS = 24;
 
     private final PostRepository postRepository;
     private final IdentityClient identityClient;
@@ -42,10 +47,10 @@ public class PostService {
 
     @Transactional(readOnly = true)
     public PageResult<PostSummary> listPublished(int page, int size, Long tenantId) {
-        PageRequest pageable = pageable(page, size, "publishedAt");
+        PageRequest pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), MAX_PAGE_SIZE));
         var result = tenantId == null
-                ? postRepository.findByStatus(PostStatus.PUBLISHED, pageable)
-                : postRepository.findByStatusAndTenantId(PostStatus.PUBLISHED, tenantId, pageable);
+                ? postRepository.findPublished(PostStatus.PUBLISHED, pageable)
+                : postRepository.findPublishedByTenant(PostStatus.PUBLISHED, tenantId, pageable);
         return PageResult.of(result, this::toSummary);
     }
 
@@ -112,6 +117,37 @@ public class PostService {
         Post post = load(id, tenantScope);
         changeStatus(post, status);
         return toResponse(postRepository.save(post), null);
+    }
+
+    /**
+     * Đẩy bài đã đăng lên đầu danh sách công khai. Mỗi đơn vị đẩy tối đa {@value #PUSH_LIMIT} bài trong
+     * {@value #PUSH_WINDOW_HOURS} giờ, và một bài cũng chỉ được đẩy một lần trong khoảng đó.
+     */
+    @Transactional
+    public PushQuota push(Long id, Long tenantId) {
+        Post post = load(id, tenantId);
+        if (post.getStatus() != PostStatus.PUBLISHED) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "POST_NOT_PUBLISHED", "Chỉ đẩy được bài đã đăng");
+        }
+        LocalDateTime since = LocalDateTime.now().minusHours(PUSH_WINDOW_HOURS);
+        if (post.getPushedAt() != null && post.getPushedAt().isAfter(since)) {
+            throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "POST_PUSH_COOLDOWN", "Bài này vừa được đẩy, hãy thử lại sau");
+        }
+        if (postRepository.countByTenantIdAndPushedAtAfter(tenantId, since) >= PUSH_LIMIT) {
+            throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "POST_PUSH_LIMIT",
+                    "Đã dùng hết " + PUSH_LIMIT + " lượt đẩy tin trong " + PUSH_WINDOW_HOURS + " giờ");
+        }
+        post.setPushedAt(LocalDateTime.now());
+        postRepository.save(post);
+        return pushQuota(tenantId);
+    }
+
+    @Transactional(readOnly = true)
+    public PushQuota pushQuota(Long tenantId) {
+        LocalDateTime since = LocalDateTime.now().minusHours(PUSH_WINDOW_HOURS);
+        int used = (int) postRepository.countByTenantIdAndPushedAtAfter(tenantId, since);
+        LocalDateTime earliest = used == 0 ? null : postRepository.findEarliestPushSince(tenantId, since);
+        return new PushQuota(PUSH_LIMIT, used, earliest == null ? null : earliest.plusHours(PUSH_WINDOW_HOURS));
     }
 
     @Transactional
@@ -218,7 +254,7 @@ public class PostService {
         return PostSummary.builder()
                 .id(p.getId()).tenantId(p.getTenantId()).authorName(p.getAuthorName()).authorDomain(p.getAuthorDomain())
                 .title(p.getTitle()).slug(p.getSlug()).excerpt(p.getExcerpt()).coverImage(p.getCoverImage())
-                .status(p.getStatus()).publishedAt(p.getPublishedAt())
+                .status(p.getStatus()).publishedAt(p.getPublishedAt()).pushedAt(p.getPushedAt())
                 .build();
     }
 

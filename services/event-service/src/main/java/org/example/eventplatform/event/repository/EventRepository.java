@@ -17,6 +17,9 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
     Page<Event> findByTenantId(Long tenantId, Pageable pageable);
 
+    /** Show công khai của các đoàn đang hoạt động, dùng cho mục Khám phá của khách. */
+    Page<Event> findByStatusInAndTenantIdIn(java.util.Collection<EventStatus> statuses, java.util.Collection<Long> tenantIds, Pageable pageable);
+
     long countByStatus(EventStatus status);
 
     List<Event> findByTenantIdAndEventDateBetween(Long tenantId, LocalDate start, LocalDate end);

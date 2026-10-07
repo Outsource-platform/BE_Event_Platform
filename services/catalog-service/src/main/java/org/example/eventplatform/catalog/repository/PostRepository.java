@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,9 +24,19 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     Optional<Post> findByIdAndTenantId(Long id, Long tenantId);
 
-    Page<Post> findByStatus(PostStatus status, Pageable pageable);
+    /** Danh sách công khai: bài mới đăng hoặc mới đẩy tin nằm trên cùng. Pageable truyền vào không được kèm sort. */
+    @Query("SELECT p FROM Post p WHERE p.status = :status ORDER BY COALESCE(p.pushedAt, p.publishedAt) DESC, p.id DESC")
+    Page<Post> findPublished(@Param("status") PostStatus status, Pageable pageable);
 
-    Page<Post> findByStatusAndTenantId(PostStatus status, Long tenantId, Pageable pageable);
+    @Query("SELECT p FROM Post p WHERE p.status = :status AND p.tenantId = :tenantId " +
+            "ORDER BY COALESCE(p.pushedAt, p.publishedAt) DESC, p.id DESC")
+    Page<Post> findPublishedByTenant(@Param("status") PostStatus status, @Param("tenantId") Long tenantId, Pageable pageable);
+
+    long countByTenantIdAndPushedAtAfter(Long tenantId, LocalDateTime since);
+
+    /** Lần đẩy tin sớm nhất còn nằm trong cửa sổ hạn mức; dùng để báo khi nào được đẩy tiếp. */
+    @Query("SELECT MIN(p.pushedAt) FROM Post p WHERE p.tenantId = :tenantId AND p.pushedAt > :since")
+    LocalDateTime findEarliestPushSince(@Param("tenantId") Long tenantId, @Param("since") LocalDateTime since);
 
     Page<Post> findByTenantId(Long tenantId, Pageable pageable);
 

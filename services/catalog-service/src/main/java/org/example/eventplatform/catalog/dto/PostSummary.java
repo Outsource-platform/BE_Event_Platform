@@ -17,6 +17,7 @@ public record PostSummary(
         String excerpt,
         String coverImage,
         PostStatus status,
-        LocalDateTime publishedAt
+        LocalDateTime publishedAt,
+        LocalDateTime pushedAt
 ) {
 }
