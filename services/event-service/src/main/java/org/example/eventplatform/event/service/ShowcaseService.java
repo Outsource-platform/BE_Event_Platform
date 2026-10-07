@@ -21,6 +21,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ShowcaseService {
 
+    private static final int MAX_MEDIA = 10;
+
     private final EventRepository eventRepository;
     private final ShowMediaRepository mediaRepository;
 
@@ -47,6 +49,17 @@ public class ShowcaseService {
                 throw new IllegalArgumentException("Đường dẫn ảnh hoặc video không hợp lệ");
             }
             items.add(ShowMedia.builder().eventId(eventId).type(type).url(url).sortOrder(order++).build());
+        }
+        if (items.size() > MAX_MEDIA) {
+            throw new IllegalArgumentException("Mỗi show tối đa " + MAX_MEDIA + " ảnh và video");
+        }
+        if (items.stream().filter(m -> m.getType() == MediaType.VIDEO).count() > 1) {
+            throw new IllegalArgumentException("Mỗi show chỉ có một video, các mục còn lại là ảnh");
+        }
+        // Video luôn đứng đầu rồi mới đến ảnh; sort ổn định nên thứ tự ảnh do đoàn sắp được giữ.
+        items.sort(java.util.Comparator.comparing((ShowMedia m) -> m.getType() != MediaType.VIDEO));
+        for (int i = 0; i < items.size(); i++) {
+            items.get(i).setSortOrder(i);
         }
         if (request.isPublished() && items.isEmpty()) {
             throw new IllegalArgumentException("Thêm ít nhất một ảnh hoặc video trước khi đăng lên Khám phá");

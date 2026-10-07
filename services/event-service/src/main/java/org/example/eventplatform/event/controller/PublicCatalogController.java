@@ -59,6 +59,11 @@ public class PublicCatalogController {
         return ResponseEntity.ok().cacheControl(CACHE).body(publicCatalogService.getShow(id));
     }
 
+    @GetMapping("/shows/{id}/related")
+    public ResponseEntity<List<PublicShowResponse>> relatedShows(@PathVariable Long id) {
+        return ResponseEntity.ok().cacheControl(CACHE).body(publicCatalogService.relatedShows(id));
+    }
+
     @GetMapping("/packages")
     public ResponseEntity<List<PublicPackageResponse>> listPackages() {
         return ResponseEntity.ok().cacheControl(CACHE).body(publicCatalogService.listPackages());

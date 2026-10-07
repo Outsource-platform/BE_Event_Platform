@@ -21,6 +21,7 @@ public record PublicShowResponse(
         LocalTime startTime,
         List<MediaDto> media,
         PublicPackageResponse showPackage,
+        List<PackageOption> troupePackages,
         Long troupeId,
         String troupeName,
         String troupeLogo,

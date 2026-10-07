@@ -22,7 +22,7 @@ public class ShowcaseRequest {
     private String description;
 
     @Valid
-    @Size(max = 12, message = "Tối đa 12 ảnh và video cho mỗi show")
+    @Size(max = 10, message = "Tối đa 10 ảnh và video cho mỗi show")
     private List<MediaItem> media;
 
     @Getter

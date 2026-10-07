@@ -79,7 +79,8 @@ services:
     build: ./services/catalog-service
     container_name: event-platform-catalog-service
     restart: unless-stopped
-    mem_limit: 416m
+    # Có thêm ffmpeg nén video nên cần nhiều bộ nhớ hơn các service khác.
+    mem_limit: 640m
     environment:
       <<: *app-env
       DB_NAME: catalog_db

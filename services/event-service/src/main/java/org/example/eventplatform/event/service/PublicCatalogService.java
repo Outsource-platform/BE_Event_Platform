@@ -9,6 +9,8 @@ import org.example.eventplatform.event.dto.PublicPackageResponse;
 import org.example.eventplatform.event.dto.PublicShowPage;
 import org.example.eventplatform.event.dto.PublicShowResponse;
 import org.example.eventplatform.event.dto.MediaDto;
+import org.example.eventplatform.event.dto.PackageOption;
+import org.example.eventplatform.event.entity.MediaType;
 import org.example.eventplatform.event.dto.PublicTroupeResponse;
 import org.example.eventplatform.event.entity.Event;
 import org.example.eventplatform.event.entity.EventStatus;
@@ -45,6 +47,7 @@ import java.util.stream.Collectors;
 public class PublicCatalogService {
 
     private static final int FEATURED_LIMIT = 10;
+    private static final int RELATED_LIMIT = 6;
 
     private static final List<EventStatus> PUBLIC_SHOW_STATUSES =
             List.of(EventStatus.SCHEDULED, EventStatus.CONFIRMED, EventStatus.IN_PROGRESS, EventStatus.COMPLETED);
@@ -77,24 +80,68 @@ public class PublicCatalogService {
         var result = eventRepository.findByShowcasePublishedTrueAndStatusInAndTenantIdIn(PUBLIC_SHOW_STATUSES, tenants.keySet(),
                 PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 50),
                         Sort.by(Sort.Direction.DESC, "eventDate").and(Sort.by(Sort.Direction.DESC, "id"))));
-        return new PublicShowPage(toShowResponses(result.getContent(), tenants), result.getNumber(), result.getSize(),
+        return new PublicShowPage(toShowResponses(result.getContent(), tenants, false), result.getNumber(), result.getSize(),
                 result.getTotalElements(), result.getTotalPages());
     }
 
+    /** Chi tiết một show: kèm toàn bộ gói của đoàn, gói đã dùng cho show này có cờ selected. */
     @Transactional(readOnly = true)
     public PublicShowResponse getShow(Long id) {
         Map<Long, IdentityServiceClient.PublicTenant> tenants = publicTenantsById();
-        var event = eventRepository.findById(id)
+        return toShowResponses(List.of(requirePublic(id, tenants)), tenants, true).get(0);
+    }
+
+    /**
+     * Show liên quan: show của đoàn khác (và cùng đoàn) đã đăng trên bảng tin, có gói giá trong khoảng ±30% giá
+     * gói của show này và cùng tỉnh/thành. Show chưa gắn gói thì chỉ xét vị trí.
+     */
+    @Transactional(readOnly = true)
+    public List<PublicShowResponse> relatedShows(Long id) {
+        Map<Long, IdentityServiceClient.PublicTenant> tenants = publicTenantsById();
+        Event base = requirePublic(id, tenants);
+        String province = tenants.get(base.getTenantId()).province();
+        BigDecimal basePrice = base.getPackageId() == null ? null
+                : showPackageRepository.findById(base.getPackageId()).map(ShowPackage::getPrice).orElse(null);
+
+        List<Event> candidates = eventRepository.findByShowcasePublishedTrueAndStatusInAndTenantIdIn(PUBLIC_SHOW_STATUSES, tenants.keySet(),
+                PageRequest.of(0, 200, Sort.by(Sort.Direction.DESC, "eventDate").and(Sort.by(Sort.Direction.DESC, "id")))).getContent();
+        Map<Long, ShowPackage> packages = showPackageRepository.findAllById(
+                candidates.stream().map(Event::getPackageId).filter(Objects::nonNull).distinct().toList())
+                .stream().collect(Collectors.toMap(ShowPackage::getId, p -> p));
+
+        List<Event> related = candidates.stream()
+                .filter(e -> !e.getId().equals(id))
+                .filter(e -> province == null || province.equalsIgnoreCase(String.valueOf(tenants.get(e.getTenantId()).province())))
+                .filter(e -> {
+                    if (basePrice == null) {
+                        return true;
+                    }
+                    ShowPackage pack = e.getPackageId() == null ? null : packages.get(e.getPackageId());
+                    return pack != null && pack.getPrice() != null && withinPriceBand(basePrice, pack.getPrice());
+                })
+                .limit(RELATED_LIMIT)
+                .toList();
+        return toShowResponses(related, tenants, false);
+    }
+
+    static boolean withinPriceBand(BigDecimal base, BigDecimal other) {
+        return other.compareTo(base.multiply(new BigDecimal("0.7"))) >= 0 && other.compareTo(base.multiply(new BigDecimal("1.3"))) <= 0;
+    }
+
+    private Event requirePublic(Long id, Map<Long, IdentityServiceClient.PublicTenant> tenants) {
+        return eventRepository.findById(id)
                 .filter(e -> Boolean.TRUE.equals(e.getShowcasePublished()) && PUBLIC_SHOW_STATUSES.contains(e.getStatus())
                         && tenants.containsKey(e.getTenantId()))
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy show này"));
-        return toShowResponses(List.of(event), tenants).get(0);
     }
 
-    private List<PublicShowResponse> toShowResponses(List<Event> events, Map<Long, IdentityServiceClient.PublicTenant> tenants) {
+    private List<PublicShowResponse> toShowResponses(List<Event> events, Map<Long, IdentityServiceClient.PublicTenant> tenants,
+                                                     boolean withTroupePackages) {
         List<Long> ids = events.stream().map(Event::getId).toList();
+        // Video luôn đứng đầu, sau đó đến ảnh theo thứ tự đoàn sắp.
         Map<Long, List<MediaDto>> media = ids.isEmpty() ? Map.of()
                 : showMediaRepository.findByEventIdInOrderBySortOrderAscIdAsc(ids).stream()
+                        .sorted(Comparator.comparing((ShowMedia m) -> m.getType() != MediaType.VIDEO))
                         .collect(Collectors.groupingBy(ShowMedia::getEventId,
                                 Collectors.mapping(m -> new MediaDto(m.getType().name(), m.getUrl()), Collectors.toList())));
         Map<Long, ShowPackage> packages = showPackageRepository.findAllById(
@@ -103,6 +150,11 @@ public class PublicCatalogService {
         return events.stream().map(e -> {
             IdentityServiceClient.PublicTenant t = tenants.get(e.getTenantId());
             ShowPackage pack = e.getPackageId() == null ? null : packages.get(e.getPackageId());
+            List<PackageOption> options = !withTroupePackages ? List.of()
+                    : showPackageRepository.findByTenantId(e.getTenantId()).stream()
+                            .filter(p -> p.isActive() || p.getId().equals(e.getPackageId()))
+                            .map(p -> new PackageOption(p.getId(), p.getName(), p.getDescription(), p.getPrice(), p.getId().equals(e.getPackageId())))
+                            .toList();
             return PublicShowResponse.builder()
                     .id(e.getId())
                     .title(e.getShowcaseTitle() != null ? e.getShowcaseTitle() : e.getName())
@@ -114,6 +166,7 @@ public class PublicCatalogService {
                     .showPackage(pack == null ? null : PublicPackageResponse.builder()
                             .id(pack.getId()).name(pack.getName()).description(pack.getDescription()).price(pack.getPrice())
                             .troupeId(t.id()).troupeName(t.name()).troupeLogo(t.logo()).build())
+                    .troupePackages(options)
                     .troupeId(t.id()).troupeName(t.name()).troupeLogo(t.logo()).province(t.province())
                     .build();
         }).toList();

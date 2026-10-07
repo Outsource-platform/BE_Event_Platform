@@ -9,6 +9,8 @@ import org.example.eventplatform.event.entity.EventStatus;
 import org.example.eventplatform.event.entity.EventType;
 import org.example.eventplatform.event.entity.MediaType;
 import org.example.eventplatform.event.entity.ShowMedia;
+import org.example.eventplatform.event.entity.ShowRating;
+import org.example.eventplatform.event.repository.ShowRatingRepository;
 import org.example.eventplatform.event.repository.ShowMediaRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.example.eventplatform.event.entity.ShowPackage;
@@ -120,6 +122,7 @@ public class DemoDataSeeder {
     private final EventRepository eventRepository;
     private final ShowCodeService showCodeService;
     private final ShowMediaRepository mediaRepository;
+    private final ShowRatingRepository ratingRepository;
 
     // Nơi catalog-service phục vụ ảnh minh hoạ demo (chúng được chép sang kho lưu trữ khi catalog khởi động).
     @Value("${demo.seed.media-base-url:https://muong14.xyz}")
@@ -215,6 +218,7 @@ public class DemoDataSeeder {
                         eventRepository.save(old);
                     }
                     ensureVideo(old.getId(), g.theme());
+                    ensureRatings(old.getId());
                 }
                 if (!Boolean.TRUE.equals(old.getShowcasePublished()) && old.getStatus() == EventStatus.COMPLETED) {
                     if (old.getPackageId() == null) {
@@ -246,6 +250,28 @@ public class DemoDataSeeder {
             event = eventRepository.save(event);
             addGalleryMedia(event.getId(), g.theme());
             ensureVideo(event.getId(), g.theme());
+            ensureRatings(event.getId());
+        }
+    }
+
+    private static final String[][] DEMO_REVIEWS = {
+            {"Nguyễn Văn Hùng", "5", "Đoàn múa rất đẹp, đúng giờ, khách ai cũng khen."},
+            {"Trần Thị Mai", "5", "Trống lân rộn ràng, không khí cực kỳ vui. Sẽ đặt lại lần sau."},
+            {"Lê Minh Tuấn", "4", "Nhiệt tình, chuyên nghiệp, giá hợp lý."},
+            {"Phạm Thu Hà", "5", "Các bạn múa nhiệt huyết, trẻ con rất thích."},
+            {"Hoàng Anh Khoa", "4", "Tốt, đến hơi trễ vài phút nhưng màn diễn rất hay."},
+            {"Đỗ Ngọc Lan", "5", "Rất hài lòng, cả nhà ai cũng vui."}};
+
+    /** Vài đánh giá mẫu cho mỗi show trưng bày demo (3 đến 6 lượt tuỳ show). Người đánh giá là mã âm nên không đụng khách thật. */
+    private void ensureRatings(Long eventId) {
+        if (ratingRepository.findByEventIdAndUserId(eventId, -1L).isPresent()) {
+            return;
+        }
+        int count = 3 + (int) (eventId % 4);
+        for (int i = 0; i < count && i < DEMO_REVIEWS.length; i++) {
+            String[] r = DEMO_REVIEWS[(int) ((eventId + i) % DEMO_REVIEWS.length)];
+            ratingRepository.save(ShowRating.builder().eventId(eventId).userId(-1L - i)
+                    .userName(r[0]).stars(Integer.parseInt(r[1])).comment(r[2]).build());
         }
     }
 

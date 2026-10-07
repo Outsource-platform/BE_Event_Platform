@@ -1,5 +1,7 @@
 FROM eclipse-temurin:17-jre
 WORKDIR /app
+# ffmpeg để nén video (H.264 720p) và đổi ảnh sang WebP khi tải lên.
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
 # Build the jar first: mvn -pl services/catalog-service -am package
 COPY target/catalog-service.jar app.jar
 EXPOSE 8082
