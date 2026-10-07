@@ -208,6 +208,12 @@ public class DemoDataSeeder {
                 // Show mẫu cũ trùng tên (do bộ show ban đầu tạo): bật trưng bày cho nó thay vì tạo thêm một show nữa.
                 Event old = same.get();
                 if (!Boolean.TRUE.equals(old.getShowcasePublished()) && old.getStatus() == EventStatus.COMPLETED) {
+                    if (old.getPackageId() == null) {
+                        packages.stream().filter(p -> g.packName().equals(p.getName())).findFirst().ifPresent(p -> {
+                            old.setPackageId(p.getId());
+                            old.setPackageName(p.getName());
+                        });
+                    }
                     old.setShowcasePublished(true);
                     old.setShowcaseTitle(name);
                     old.setShowcaseDescription(g.description());

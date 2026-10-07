@@ -47,6 +47,13 @@ public class ResponseWrappingAdvice implements ResponseBodyAdvice<Object> {
         if (body instanceof byte[] || body instanceof org.springframework.core.io.Resource) {
             return body;
         }
+        // Yêu cầu có header Range (phát video, tải tiếp): Spring đổi Resource thành danh sách ResourceRegion
+        // trước khi vào đây, bọc lại sẽ hỏng phản hồi 206.
+        if (body instanceof org.springframework.core.io.support.ResourceRegion
+                || (body instanceof java.util.Collection<?> c && !c.isEmpty()
+                        && c.iterator().next() instanceof org.springframework.core.io.support.ResourceRegion)) {
+            return body;
+        }
         // A null body (e.g. ResponseEntity.noContent().build()) means the method
         // deliberately wants no body written — a 204 must stay bodyless.
         if (body == null) {
