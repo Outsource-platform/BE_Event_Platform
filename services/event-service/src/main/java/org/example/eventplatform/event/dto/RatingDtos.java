@@ -35,4 +35,8 @@ public final class RatingDtos {
 
     public record Page(Summary summary, List<Item> items, int page, int totalPages, long totalElements) {
     }
+
+    /** Khách có được viết đánh giá show này không. App dùng để ẩn nút trước khi gửi. */
+    public record Eligibility(boolean canRate) {
+    }
 }

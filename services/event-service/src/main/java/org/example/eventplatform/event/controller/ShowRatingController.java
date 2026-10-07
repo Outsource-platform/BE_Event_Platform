@@ -27,6 +27,12 @@ public class ShowRatingController {
                 .body(ratingService.list(id, page, size));
     }
 
+    @GetMapping("/api/customer/shows/{id}/can-rate")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<RatingDtos.Eligibility> canRate(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable Long id) {
+        return ResponseEntity.ok(ratingService.eligibility(id, principal.userId()));
+    }
+
     @PostMapping("/api/customer/shows/{id}/rating")
     @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<RatingDtos.Summary> rate(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable Long id,

@@ -92,14 +92,16 @@ public class PublicCatalogService {
     }
 
     /**
-     * Show liên quan: show của đoàn khác (và cùng đoàn) đã đăng trên bảng tin, có gói giá trong khoảng ±30% giá
-     * gói của show này và cùng tỉnh/thành. Show chưa gắn gói thì chỉ xét vị trí.
+     * Show liên quan: đã đăng trên bảng tin, giá gói trong khoảng ±30%, cùng tỉnh và cùng phường của đoàn.
+     * Show chưa gắn gói thì chỉ xét vị trí. Thiếu tỉnh hoặc phường thì không ghép, tránh kéo show khác khu vực.
      */
     @Transactional(readOnly = true)
     public List<PublicShowResponse> relatedShows(Long id) {
         Map<Long, IdentityServiceClient.PublicTenant> tenants = publicTenantsById();
         Event base = requirePublic(id, tenants);
-        String province = tenants.get(base.getTenantId()).province();
+        IdentityServiceClient.PublicTenant baseTenant = tenants.get(base.getTenantId());
+        String province = baseTenant.province();
+        String ward = baseTenant.ward();
         BigDecimal basePrice = base.getPackageId() == null ? null
                 : showPackageRepository.findById(base.getPackageId()).map(ShowPackage::getPrice).orElse(null);
 
@@ -111,7 +113,10 @@ public class PublicCatalogService {
 
         List<Event> related = candidates.stream()
                 .filter(e -> !e.getId().equals(id))
-                .filter(e -> province == null || province.equalsIgnoreCase(String.valueOf(tenants.get(e.getTenantId()).province())))
+                .filter(e -> {
+                    IdentityServiceClient.PublicTenant tenant = tenants.get(e.getTenantId());
+                    return tenant != null && samePlace(province, tenant.province()) && samePlace(ward, tenant.ward());
+                })
                 .filter(e -> {
                     if (basePrice == null) {
                         return true;
@@ -222,6 +227,14 @@ public class PublicCatalogService {
     }
 
     /** Trống nghĩa là không lọc; còn lại so khớp không phân biệt hoa thường và dấu. */
+    /** Cả hai tên phải có và trùng sau khi bỏ dấu, tiền tố hành chính. */
+    private boolean samePlace(String left, String right) {
+        if (left == null || left.isBlank() || right == null || right.isBlank()) {
+            return false;
+        }
+        return PlaceCatalog.normalize(left).equals(PlaceCatalog.normalize(right));
+    }
+
     private boolean sameArea(String wanted, String actual) {
         if (wanted == null || wanted.isBlank()) {
             return true;
