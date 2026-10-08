@@ -120,12 +120,27 @@ public class ShowRatingService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy show này"));
     }
 
-    /** "Nguyễn Văn A" -> "Ngu***", như rencity: không để lộ tên đầy đủ của khách. */
+    /**
+     * Chỉ che tên (từ cuối cùng). Họ và tên đệm giữ nguyên.
+     * "Nguyễn Văn Hùng" -> "Nguyễn Văn H***". Một từ thì coi cả từ là tên.
+     */
     static String mask(String name) {
         if (name == null || name.isBlank()) {
             return "Khách***";
         }
-        String n = name.trim();
-        return (n.length() >= 3 ? n.substring(0, 3) : n) + "***";
+        String[] parts = name.trim().split("\\s+");
+        String given = parts[parts.length - 1];
+        String maskedGiven = given.isEmpty() ? "***" : given.substring(0, 1) + "***";
+        if (parts.length == 1) {
+            return maskedGiven;
+        }
+        StringBuilder kept = new StringBuilder();
+        for (int i = 0; i < parts.length - 1; i++) {
+            if (i > 0) {
+                kept.append(' ');
+            }
+            kept.append(parts[i]);
+        }
+        return kept.append(' ').append(maskedGiven).toString();
     }
 }
