@@ -2,6 +2,7 @@ package org.example.eventplatform.identity.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.example.eventplatform.identity.dto.auth.UpdateBankAccountRequest;
 import org.example.eventplatform.identity.dto.user.CreateMemberRequest;
 import org.example.eventplatform.identity.dto.user.MemberResponse;
 import org.example.eventplatform.identity.dto.user.UpdateAvailabilityRequest;
@@ -68,5 +69,19 @@ public class UserController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateCommissionRateRequest request) {
         return ResponseEntity.ok(userService.updateCommissionRate(principal.tenantId(), id, request.getCommissionRate()));
+    }
+
+    @PatchMapping("/{id}/bank-account")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<MemberResponse> updateBankAccount(
+            @AuthenticationPrincipal JwtPrincipal principal,
+            @PathVariable Long id,
+            @RequestBody UpdateBankAccountRequest request) {
+        return ResponseEntity.ok(userService.updateBankAccount(
+                principal.tenantId(),
+                id,
+                request.getBankName(),
+                request.getBankAccountNumber(),
+                request.getBankAccountHolder()));
     }
 }

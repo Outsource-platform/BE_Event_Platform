@@ -36,6 +36,16 @@ public class User extends BaseEntity {
     private String fullName;
     private Integer seniority;
 
+    /** Để trưởng đoàn chuyển khoản khi duyệt rút điểm. Không đưa ra API công khai. */
+    @Column(name = "bank_name")
+    private String bankName;
+
+    @Column(name = "bank_account_number")
+    private String bankAccountNumber;
+
+    @Column(name = "bank_account_holder")
+    private String bankAccountHolder;
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "tenant_id")
     private Tenant tenant;

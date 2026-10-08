@@ -22,6 +22,9 @@ public class WithdrawalResponse {
     private String status;
     private String statusDisplayName;
     private String note;
+    private String bankName;
+    private String bankAccountNumber;
+    private String bankAccountHolder;
     private LocalDateTime createdAt;
     private LocalDateTime processedAt;
 }

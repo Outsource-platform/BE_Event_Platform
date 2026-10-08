@@ -182,7 +182,22 @@ public class AuthService {
                 .ward(user.getTenant() != null ? user.getTenant().getWard() : null)
                 .primaryColorHex(user.getTenant() != null ? user.getTenant().getPrimaryColorHex() : null)
                 .accentColorHex(user.getTenant() != null ? user.getTenant().getAccentColorHex() : null)
+                .bankName(user.getBankName())
+                .bankAccountNumber(user.getBankAccountNumber())
+                .bankAccountHolder(user.getBankAccountHolder())
                 .build();
+    }
+
+    @Transactional
+    public UserSummaryResponse updateBankAccount(Long userId, String bankName, String accountNumber, String accountHolder) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Người dùng không còn tồn tại"));
+        String role = user.getRoles() != null ? user.getRoles().getName() : "";
+        if (CUSTOMER_ROLE.equals(role)) {
+            throw new IllegalArgumentException("Khách không lưu tài khoản ngân hàng tại đây");
+        }
+        BankAccounts.apply(user, bankName, accountNumber, accountHolder);
+        return toSummary(userRepository.save(user));
     }
 
     /**
@@ -215,6 +230,7 @@ public class AuthService {
         user.setFullName("Người dùng đã xóa");
         user.setEmail(null);
         user.setPhone(null);
+        BankAccounts.clear(user);
         // Mật khẩu ngẫu nhiên không ai biết, để tài khoản không thể đăng nhập lại.
         user.setPassword(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
         user.setVerificationToken(null);

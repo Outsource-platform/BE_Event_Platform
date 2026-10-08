@@ -62,6 +62,7 @@ public class IdentityServiceClient {
     }
 
     public record UserContact(Long userId, Long tenantId, String username, String fullName, String email,
-                               String availabilityStatus, java.math.BigDecimal commissionRate) {
+                               String availabilityStatus, java.math.BigDecimal commissionRate,
+                               String bankName, String bankAccountNumber, String bankAccountHolder) {
     }
 }

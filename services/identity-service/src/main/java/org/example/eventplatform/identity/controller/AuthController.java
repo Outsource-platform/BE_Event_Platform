@@ -8,6 +8,7 @@ import org.example.eventplatform.identity.dto.auth.DeleteAccountRequest;
 import org.example.eventplatform.identity.dto.auth.LoginRequest;
 import org.example.eventplatform.identity.dto.auth.RefreshTokenRequest;
 import org.example.eventplatform.identity.dto.auth.TenantLookupResponse;
+import org.example.eventplatform.identity.dto.auth.UpdateBankAccountRequest;
 import org.example.eventplatform.identity.dto.auth.UserSummaryResponse;
 import org.example.eventplatform.identity.service.AuthService;
 import org.example.eventplatform.shared.security.JwtPrincipal;
@@ -53,5 +54,17 @@ public class AuthController {
     @GetMapping("/me")
     public ResponseEntity<UserSummaryResponse> getMe(@AuthenticationPrincipal JwtPrincipal principal) {
         return ResponseEntity.ok(authService.getMe(principal.userId()));
+    }
+
+    /** Thành viên tự khai tài khoản nhận tiền trên hồ sơ của mình. */
+    @PatchMapping("/me/bank-account")
+    public ResponseEntity<UserSummaryResponse> updateBankAccount(
+            @AuthenticationPrincipal JwtPrincipal principal,
+            @RequestBody UpdateBankAccountRequest request) {
+        return ResponseEntity.ok(authService.updateBankAccount(
+                principal.userId(),
+                request.getBankName(),
+                request.getBankAccountNumber(),
+                request.getBankAccountHolder()));
     }
 }

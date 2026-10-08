@@ -29,4 +29,7 @@ public class UserSummaryResponse {
     private String ward;
     private String primaryColorHex;
     private String accentColorHex;
+    private String bankName;
+    private String bankAccountNumber;
+    private String bankAccountHolder;
 }

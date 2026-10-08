@@ -91,6 +91,14 @@ public class UserService {
         return toResponse(userRepository.save(user));
     }
 
+    @Transactional
+    public MemberResponse updateBankAccount(Long tenantId, Long userId, String bankName, String accountNumber, String accountHolder) {
+        User user = userRepository.findByIdAndTenantId(userId, tenantId)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy thành viên với ID: " + userId));
+        BankAccounts.apply(user, bankName, accountNumber, accountHolder);
+        return toResponse(userRepository.save(user));
+    }
+
     private MemberResponse toResponse(User user) {
         return MemberResponse.builder()
                 .id(user.getId())
@@ -103,6 +111,9 @@ public class UserService {
                 .isActive(user.getIsActive())
                 .availabilityStatus(user.getAvailabilityStatus())
                 .commissionRate(user.getCommissionRate())
+                .bankName(user.getBankName())
+                .bankAccountNumber(user.getBankAccountNumber())
+                .bankAccountHolder(user.getBankAccountHolder())
                 .build();
     }
 }

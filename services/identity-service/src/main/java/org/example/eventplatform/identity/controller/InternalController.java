@@ -106,6 +106,9 @@ public class InternalController {
                 .email(user.getEmail())
                 .availabilityStatus(user.getAvailabilityStatus())
                 .commissionRate(user.getCommissionRate())
+                .bankName(user.getBankName())
+                .bankAccountNumber(user.getBankAccountNumber())
+                .bankAccountHolder(user.getBankAccountHolder())
                 .build();
     }
 

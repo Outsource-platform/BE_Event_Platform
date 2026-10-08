@@ -22,4 +22,7 @@ public class UserContactResponse {
     private String email;
     private AvailabilityStatus availabilityStatus;
     private BigDecimal commissionRate;
+    private String bankName;
+    private String bankAccountNumber;
+    private String bankAccountHolder;
 }
