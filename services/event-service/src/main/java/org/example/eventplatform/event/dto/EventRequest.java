@@ -48,6 +48,8 @@ public class EventRequest {
 
     private LocalTime concentrateTime;
     private String concentrateLocation;
+    private Double concentrateLat;
+    private Double concentrateLng;
 
     // Gói biểu diễn tự chọn từ danh mục của tenant — để trống nếu không dùng gói có sẵn.
     private Long packageId;

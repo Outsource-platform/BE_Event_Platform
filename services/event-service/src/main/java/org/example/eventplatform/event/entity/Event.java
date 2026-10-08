@@ -65,6 +65,12 @@ public class Event extends BaseEntity {
     private LocalTime concentrateTime;
     private String concentrateLocation;
 
+    @Column(name = "concentrate_lat")
+    private Double concentrateLat;
+
+    @Column(name = "concentrate_lng")
+    private Double concentrateLng;
+
     @Column(name = "description", columnDefinition = "LONGTEXT")
     private String description;
 

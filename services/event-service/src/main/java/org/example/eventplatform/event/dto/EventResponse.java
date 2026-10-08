@@ -38,6 +38,8 @@ public class EventResponse {
     private String serviceCategoryName;
     private LocalTime concentrateTime;
     private String concentrateLocation;
+    private Double concentrateLat;
+    private Double concentrateLng;
     private BigDecimal totalAmount;
     private BigDecimal platformFee;
     private Long packageId;
