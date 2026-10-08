@@ -58,7 +58,7 @@ public class WithdrawalService {
                 null,
                 tenantId,
                 "Yêu cầu rút điểm mới",
-                "User #" + userId + " yêu cầu rút " + request.getAmount() + " điểm",
+                memberLabel(userId) + " yêu cầu rút " + request.getAmount() + " điểm",
                 Map.of("withdrawalId", String.valueOf(saved.getId()))
         );
 
@@ -123,6 +123,20 @@ public class WithdrawalService {
             throw new IllegalStateException("Yêu cầu này đã được xử lý");
         }
         return w;
+    }
+
+    /** Cùng cách gọi tên với thông báo điểm danh: họ tên, không có thì tên đăng nhập. */
+    private String memberLabel(Long userId) {
+        IdentityServiceClient.UserContact user = identityServiceClient.findUser(userId);
+        if (user != null) {
+            if (user.fullName() != null && !user.fullName().isBlank()) {
+                return user.fullName().trim();
+            }
+            if (user.username() != null && !user.username().isBlank()) {
+                return user.username().trim();
+            }
+        }
+        return "Thành viên";
     }
 
     private String formatStatus(WithdrawalStatus status) {

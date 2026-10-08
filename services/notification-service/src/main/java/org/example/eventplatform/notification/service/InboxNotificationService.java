@@ -2,6 +2,7 @@ package org.example.eventplatform.notification.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.eventplatform.notification.client.IdentityServiceClient;
 import org.example.eventplatform.notification.dto.NotificationResponse;
 import org.example.eventplatform.notification.entity.UserNotification;
 import org.example.eventplatform.notification.repository.UserNotificationRepository;
@@ -12,8 +13,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -23,8 +27,10 @@ import java.util.regex.Pattern;
 public class InboxNotificationService {
 
     private static final Pattern JSON_ENTRY = Pattern.compile("\"((?:\\\\.|[^\"\\\\])*)\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
+    private static final Pattern USER_ID_IN_BODY = Pattern.compile("User #(\\d+)");
 
     private final UserNotificationRepository userNotificationRepository;
+    private final IdentityServiceClient identityServiceClient;
 
     @Transactional
     public void saveIfAbsent(Long userId, NotificationMessage message) {
@@ -47,8 +53,9 @@ public class InboxNotificationService {
 
     @Transactional(readOnly = true)
     public Page<NotificationResponse> listForUser(Long userId, Pageable pageable) {
-        return userNotificationRepository.findByUserIdAndDeletedFalseOrderByCreatedAtDesc(userId, pageable)
-                .map(this::toResponse);
+        Page<UserNotification> page = userNotificationRepository.findByUserIdAndDeletedFalseOrderByCreatedAtDesc(userId, pageable);
+        Map<Long, String> names = namesIn(page.getContent());
+        return page.map(n -> toResponse(n, names));
     }
 
     @Transactional(readOnly = true)
@@ -66,13 +73,62 @@ public class InboxNotificationService {
         userNotificationRepository.markAllRead(userId, LocalDateTime.now());
     }
 
-    private NotificationResponse toResponse(UserNotification n) {
+    /** Thông báo cũ lưu "User #id". Đổi lúc đọc để hộp thư trưởng đoàn hiện họ tên mà không sửa dữ liệu đã ghi. */
+    private Map<Long, String> namesIn(List<UserNotification> notifications) {
+        Set<Long> ids = new HashSet<>();
+        for (UserNotification notification : notifications) {
+            if (notification.getBody() == null) {
+                continue;
+            }
+            Matcher matcher = USER_ID_IN_BODY.matcher(notification.getBody());
+            while (matcher.find()) {
+                ids.add(Long.parseLong(matcher.group(1)));
+            }
+        }
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, String> names = new LinkedHashMap<>();
+        identityServiceClient.findUsersByIds(ids).forEach((id, user) -> {
+            String name = displayName(user);
+            if (name != null) {
+                names.put(id, name);
+            }
+        });
+        return names;
+    }
+
+    private String displayName(IdentityServiceClient.UserContact user) {
+        if (user.fullName() != null && !user.fullName().isBlank()) {
+            return user.fullName().trim();
+        }
+        if (user.username() != null && !user.username().isBlank()) {
+            return user.username().trim();
+        }
+        return null;
+    }
+
+    private String withMemberNames(String body, Map<Long, String> names) {
+        if (body == null || names.isEmpty() || !body.contains("User #")) {
+            return body;
+        }
+        Matcher matcher = USER_ID_IN_BODY.matcher(body);
+        StringBuilder out = new StringBuilder();
+        while (matcher.find()) {
+            String name = names.get(Long.parseLong(matcher.group(1)));
+            matcher.appendReplacement(out, Matcher.quoteReplacement(name != null ? name : matcher.group()));
+        }
+        matcher.appendTail(out);
+        return out.toString();
+    }
+
+    private NotificationResponse toResponse(UserNotification n, Map<Long, String> names) {
         return NotificationResponse.builder()
                 .id(n.getId())
                 .messageId(n.getMessageId())
                 .type(n.getType())
                 .title(n.getTitle())
-                .body(n.getBody())
+                .body(withMemberNames(n.getBody(), names))
                 .data(parseData(n.getDataJson()))
                 .read(n.getReadAt() != null)
                 .readAt(n.getReadAt())

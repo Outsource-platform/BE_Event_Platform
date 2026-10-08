@@ -425,7 +425,7 @@ public class EventService {
                 null,
                 ue.getEvent().getTenantId(),
                 status == AssignStatus.REJECTED ? "Thành viên đã từ chối show" : "Thành viên đã nhận show",
-                "User #" + ue.getUserId() + " đã phản hồi show \"" + ue.getEvent().getName() + "\"",
+                memberLabel(ue.getUserId()) + " đã phản hồi show \"" + ue.getEvent().getName() + "\"",
                 Map.of("userEventId", String.valueOf(userEventId), "note", note == null ? "" : note)
         );
     }
@@ -460,7 +460,7 @@ public class EventService {
                 null,
                 ue.getEvent().getTenantId(),
                 "Thành viên đã tập trung",
-                "User #" + ue.getUserId() + " đã check-in tập trung lúc " + now.format(HOUR_MINUTE)
+                memberLabel(ue.getUserId()) + " đã check-in tập trung lúc " + now.format(HOUR_MINUTE)
                         + " cho show \"" + ue.getEvent().getName() + "\" — " + punctuality + ".",
                 Map.of("userEventId", String.valueOf(userEventId), "eventId", String.valueOf(ue.getEvent().getId()), "punctuality", punctuality)
         );
@@ -504,7 +504,7 @@ public class EventService {
                 null,
                 event.getTenantId(),
                 "Thành viên đã check-in",
-                "User #" + ue.getUserId() + " đã check-in tại show \"" + event.getName() + "\"",
+                memberLabel(ue.getUserId()) + " đã check-in tại show \"" + event.getName() + "\"",
                 Map.of("userEventId", String.valueOf(userEventId), "eventId", String.valueOf(event.getId()))
         );
     }
@@ -529,7 +529,7 @@ public class EventService {
                 null,
                 ue.getEvent().getTenantId(),
                 "Thành viên đã check-out",
-                "User #" + ue.getUserId() + " đã hoàn thành show \"" + ue.getEvent().getName() + "\"",
+                memberLabel(ue.getUserId()) + " đã hoàn thành show \"" + ue.getEvent().getName() + "\"",
                 Map.of("userEventId", String.valueOf(userEventId), "eventId", String.valueOf(ue.getEvent().getId()))
         );
 
@@ -804,6 +804,20 @@ public class EventService {
                 .totalPayroll(ue.getSalary())
                 .teammates(teammates)
                 .build();
+    }
+
+    /** Trưởng đoàn cần nhận ra người, không hiện "User #id". Họ tên trước, không có thì tên đăng nhập. */
+    private String memberLabel(Long userId) {
+        IdentityServiceClient.UserContact user = identityServiceClient.findUser(userId);
+        if (user != null) {
+            if (user.fullName() != null && !user.fullName().isBlank()) {
+                return user.fullName().trim();
+            }
+            if (user.username() != null && !user.username().isBlank()) {
+                return user.username().trim();
+            }
+        }
+        return "Thành viên";
     }
 
     private String formatEventStatus(EventStatus status) {
