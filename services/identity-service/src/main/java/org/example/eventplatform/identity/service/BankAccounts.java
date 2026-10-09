@@ -19,6 +19,9 @@ public final class BankAccounts {
         if (any && (name == null || number == null || holder == null)) {
             throw new IllegalArgumentException("Nhập đủ ngân hàng, số tài khoản và chủ tài khoản");
         }
+        if (holder != null && holder.length() > 100) {
+            throw new IllegalArgumentException("Tên chủ tài khoản tối đa 100 ký tự");
+        }
         if (number != null) {
             String digits = number.replaceAll("\\s", "");
             if (!digits.matches("\\d{6,20}")) {

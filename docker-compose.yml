@@ -71,6 +71,8 @@ services:
       SUPERADMIN_USERNAME: ${SUPERADMIN_USERNAME}
       SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD}
       DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD:-}
+      # Khoá mã hoá số tài khoản ngân hàng; thiếu thì identity-service không khởi động.
+      DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:-}
     depends_on:
       redis:
         condition: service_healthy

@@ -2,6 +2,7 @@ package org.example.eventplatform.identity.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import org.example.eventplatform.identity.crypto.EncryptedStringConverter;
 import lombok.*;
 import org.example.eventplatform.shared.entity.BaseEntity;
 
@@ -40,9 +41,12 @@ public class User extends BaseEntity {
     @Column(name = "bank_name")
     private String bankName;
 
+    // Số tài khoản và tên chủ tài khoản được mã hoá khi lưu (xem FieldEncryptor); trong code vẫn là chữ thường.
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "bank_account_number")
     private String bankAccountNumber;
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "bank_account_holder")
     private String bankAccountHolder;
 
