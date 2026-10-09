@@ -117,6 +117,10 @@ public class Event extends BaseEntity {
     @Column(name = "showcase_published")
     private Boolean showcasePublished;
 
+    // Người đăng show lên Khám phá: khách bấm Chat ở bài này thì nhắn thẳng tới người đó.
+    @Column(name = "showcase_published_by")
+    private Long showcasePublishedBy;
+
     @Column(name = "showcase_title")
     private String showcaseTitle;
 

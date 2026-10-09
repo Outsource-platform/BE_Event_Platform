@@ -33,7 +33,7 @@ public class ShowcaseService {
     }
 
     @Transactional
-    public ShowcaseResponse save(Long eventId, Long tenantId, ShowcaseRequest request) {
+    public ShowcaseResponse save(Long eventId, Long tenantId, Long userId, ShowcaseRequest request) {
         Event event = load(eventId, tenantId);
         List<ShowMedia> items = new ArrayList<>();
         int order = 0;
@@ -63,6 +63,10 @@ public class ShowcaseService {
         }
         if (request.isPublished() && items.isEmpty()) {
             throw new IllegalArgumentException("Thêm ít nhất một ảnh hoặc video trước khi đăng lên Khám phá");
+        }
+        // Người đăng đầu tiên là người nhận tin nhắn của khách; ai sửa bài sau đó không đổi người nhận.
+        if (request.isPublished() && (!Boolean.TRUE.equals(event.getShowcasePublished()) || event.getShowcasePublishedBy() == null)) {
+            event.setShowcasePublishedBy(userId);
         }
         event.setShowcasePublished(request.isPublished());
         event.setShowcaseTitle(blankToNull(request.getTitle()));

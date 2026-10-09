@@ -121,7 +121,7 @@ public class IdentityServiceClient {
                                String province, String ward, String primaryColorHex, String accentColorHex) {
     }
 
-    public record UserContact(Long userId, Long tenantId, String username, String fullName, String email,
+    public record UserContact(Long userId, Long tenantId, String username, String fullName, String roleName, String email,
                                String availabilityStatus, java.math.BigDecimal commissionRate,
                                String bankName, String bankAccountNumber, String bankAccountHolder,
                                java.math.BigDecimal teamFundPercent) {

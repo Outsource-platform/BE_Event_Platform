@@ -28,6 +28,6 @@ public class ShowcaseController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ShowcaseResponse> save(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable Long eventId,
                                                  @Valid @RequestBody ShowcaseRequest request) {
-        return ResponseEntity.ok(showcaseService.save(eventId, principal.tenantId(), request));
+        return ResponseEntity.ok(showcaseService.save(eventId, principal.tenantId(), principal.userId(), request));
     }
 }

@@ -6,65 +6,47 @@ import org.example.eventplatform.event.dto.ChatDtos;
 import org.example.eventplatform.event.service.ChatService;
 import org.example.eventplatform.shared.security.JwtPrincipal;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-/** Nhắn tin khách ↔ trưởng đoàn. Khách dùng /api/customer/chat, trưởng đoàn dùng /api/tenant/chat. */
+/** Nhắn tin chung cho khách, thành viên và trưởng đoàn; phía nào của cuộc trò chuyện thì tự suy ra từ người gọi. */
 @RestController
+@RequestMapping("/api/chat")
 @RequiredArgsConstructor
 public class ChatController {
 
     private final ChatService chatService;
 
-    // ===== Khách =====
+    private static ChatService.Caller caller(JwtPrincipal principal) {
+        return new ChatService.Caller(principal.userId(), principal.tenantId(), principal.authorities().contains("ROLE_ADMIN"));
+    }
 
-    @PostMapping("/api/customer/chat/conversations")
-    @PreAuthorize("hasRole('CUSTOMER')")
+    @PostMapping("/conversations")
     public ResponseEntity<ChatDtos.Conversation> open(@AuthenticationPrincipal JwtPrincipal principal,
                                                       @RequestBody ChatDtos.OpenRequest request) {
-        return ResponseEntity.ok(chatService.open(principal.userId(), request.getTenantId(), request.getEventId()));
+        return ResponseEntity.ok(chatService.open(caller(principal), request.getTenantId(), request.getEventId()));
     }
 
-    @GetMapping("/api/customer/chat/conversations")
-    @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<ChatDtos.Inbox> customerInbox(@AuthenticationPrincipal JwtPrincipal principal) {
-        return ResponseEntity.ok(chatService.inboxForCustomer(principal.userId()));
+    @GetMapping("/conversations")
+    public ResponseEntity<ChatDtos.Inbox> inbox(@AuthenticationPrincipal JwtPrincipal principal) {
+        return ResponseEntity.ok(chatService.inbox(caller(principal)));
     }
 
-    @GetMapping("/api/customer/chat/conversations/{id}")
-    @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<ChatDtos.Thread> customerThread(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable Long id,
-                                                          @RequestParam(required = false) Long after) {
-        return ResponseEntity.ok(chatService.thread(id, principal.userId(), false, after));
+    @GetMapping("/conversations/{id}")
+    public ResponseEntity<ChatDtos.Thread> thread(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable Long id,
+                                                  @RequestParam(required = false) Long after) {
+        return ResponseEntity.ok(chatService.thread(id, caller(principal), after));
     }
 
-    @PostMapping("/api/customer/chat/conversations/{id}/messages")
-    @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<ChatDtos.Message> customerSend(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable Long id,
-                                                         @Valid @RequestBody ChatDtos.SendRequest request) {
-        return ResponseEntity.ok(chatService.send(id, principal.userId(), false, principal.userId(), request.getContent(), request.getImageUrl()));
-    }
-
-    // ===== Trưởng đoàn =====
-
-    @GetMapping("/api/tenant/chat/conversations")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ChatDtos.Inbox> tenantInbox(@AuthenticationPrincipal JwtPrincipal principal) {
-        return ResponseEntity.ok(chatService.inboxForTenant(principal.tenantId()));
-    }
-
-    @GetMapping("/api/tenant/chat/conversations/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ChatDtos.Thread> tenantThread(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable Long id,
-                                                        @RequestParam(required = false) Long after) {
-        return ResponseEntity.ok(chatService.thread(id, principal.tenantId(), true, after));
-    }
-
-    @PostMapping("/api/tenant/chat/conversations/{id}/messages")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ChatDtos.Message> tenantSend(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable Long id,
-                                                       @Valid @RequestBody ChatDtos.SendRequest request) {
-        return ResponseEntity.ok(chatService.send(id, principal.tenantId(), true, principal.userId(), request.getContent(), request.getImageUrl()));
+    @PostMapping("/conversations/{id}/messages")
+    public ResponseEntity<ChatDtos.Message> send(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable Long id,
+                                                 @Valid @RequestBody ChatDtos.SendRequest request) {
+        return ResponseEntity.ok(chatService.send(id, caller(principal), request.getContent(), request.getImageUrl()));
     }
 }

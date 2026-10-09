@@ -35,6 +35,12 @@ public class ChatConversation extends BaseEntity {
     @Column(name = "event_id")
     private Long eventId;
 
+    // Người phía đoàn nhận cuộc này (người đăng bài). Trống = trưởng đoàn nào của đoàn cũng thấy và trả lời được.
+    @Column(name = "troupe_user_id")
+    private Long troupeUserId;
+
+    private String troupeUserName;
+
     private String customerName;
     private String tenantName;
     private String eventTitle;

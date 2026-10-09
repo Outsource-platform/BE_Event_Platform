@@ -19,6 +19,7 @@ public class UserContactResponse {
     private Long tenantId;
     private String username;
     private String fullName;
+    private String roleName;
     private String email;
     private AvailabilityStatus availabilityStatus;
     private BigDecimal commissionRate;

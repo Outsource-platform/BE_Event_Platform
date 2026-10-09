@@ -103,6 +103,7 @@ public class InternalController {
                 .tenantId(user.getTenant() != null ? user.getTenant().getId() : null)
                 .username(user.getUsername())
                 .fullName(user.getFullName())
+                .roleName(user.getRoles() != null ? user.getRoles().getName() : null)
                 .email(user.getEmail())
                 .availabilityStatus(user.getAvailabilityStatus())
                 .commissionRate(user.getCommissionRate())
