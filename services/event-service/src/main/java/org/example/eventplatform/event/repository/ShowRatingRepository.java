@@ -18,6 +18,8 @@ public interface ShowRatingRepository extends JpaRepository<ShowRating, Long> {
 
     Optional<ShowRating> findByEventIdAndUserId(Long eventId, Long userId);
 
+    java.util.List<ShowRating> findByUserId(Long userId);
+
     /** Mỗi dòng: [số sao, số lượt]. */
     @Query("SELECT r.stars, COUNT(r) FROM ShowRating r WHERE r.eventId = :eventId GROUP BY r.stars")
     List<Object[]> countByStars(@Param("eventId") Long eventId);

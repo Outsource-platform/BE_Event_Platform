@@ -127,6 +127,15 @@ public class ChatService {
         return toMessage(saved);
     }
 
+    /** Khách xoá tài khoản: xoá các cuộc trò chuyện và tin nhắn của khách đó (tin nhắn có thể chứa thông tin cá nhân). */
+    @Transactional
+    public void deleteCustomerData(Long customerUserId) {
+        for (ChatConversation c : conversationRepository.findByCustomerUserIdOrderByLastMessageAtDesc(customerUserId)) {
+            messageRepository.deleteByConversationId(c.getId());
+            conversationRepository.delete(c);
+        }
+    }
+
     // ===== Nội bộ =====
 
     private ChatConversation authorized(Long conversationId, Long callerId, boolean asTenant) {

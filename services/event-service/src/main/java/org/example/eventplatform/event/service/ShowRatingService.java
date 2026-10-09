@@ -114,6 +114,17 @@ public class ShowRatingService {
         return eventRepository.existsByTenantIdAndCustomerIdInAndStatusIn(event.getTenantId(), customerIds, USED_STATUSES);
     }
 
+    /** Khách xoá tài khoản: giữ số sao (để điểm trung bình không đổi), bỏ tên và nhận xét có thể nhận ra người viết. */
+    @Transactional
+    public void anonymizeUser(Long userId) {
+        var ratings = ratingRepository.findByUserId(userId);
+        ratings.forEach(r -> {
+            r.setUserName(null);
+            r.setComment(null);
+        });
+        ratingRepository.saveAll(ratings);
+    }
+
     private Event requirePublished(Long eventId) {
         return eventRepository.findById(eventId)
                 .filter(e -> Boolean.TRUE.equals(e.getShowcasePublished()))

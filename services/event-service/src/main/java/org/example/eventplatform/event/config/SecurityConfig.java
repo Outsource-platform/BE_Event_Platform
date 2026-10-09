@@ -20,6 +20,9 @@ public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
 
+    @org.springframework.beans.factory.annotation.Value("${internal.service-token:}")
+    private String internalServiceToken;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -29,12 +32,18 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/events").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
                         .requestMatchers("/error").permitAll()
+                        // Chỉ service khác gọi (không đi qua gateway); InternalServiceAuthFilter kiểm tra X-Internal-Token.
+                        .requestMatchers("/api/internal/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 );
 
+        http.addFilterBefore(
+                new org.example.eventplatform.shared.security.InternalServiceAuthFilter(internalServiceToken),
+                UsernamePasswordAuthenticationFilter.class
+        );
         http.addFilterBefore(
                 new JwtAuthenticationFilter(jwtTokenProvider),
                 UsernamePasswordAuthenticationFilter.class

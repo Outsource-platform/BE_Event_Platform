@@ -221,6 +221,7 @@ public class AuthService {
             accountCleanupClient.deleteNotificationData(userId);
             if (CUSTOMER_ROLE.equals(role)) {
                 accountCleanupClient.anonymizeCustomerRecords(userId);
+                accountCleanupClient.deleteEventData(userId);
             }
         } catch (Exception ex) {
             throw new IllegalStateException("Hệ thống đang bận, vui lòng thử xoá tài khoản lại sau ít phút");
