@@ -113,6 +113,16 @@ public class TenantEventController {
         return ResponseEntity.ok(eventService.updateConcentrateInfo(id, principal.tenantId(), request));
     }
 
+    /** Đổi người thầu (hưởng hoa hồng) của show; contract_user_id trống là bỏ người thầu. */
+    @PatchMapping("/{id}/contract")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<EventResponse> updateContract(
+            @AuthenticationPrincipal JwtPrincipal principal,
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, Long> body) {
+        return ResponseEntity.ok(eventService.updateContract(id, principal.tenantId(), body.get("contract_user_id")));
+    }
+
     // ===== Member (anh em đi diễn) =====
 
     @GetMapping("/my-assignments")

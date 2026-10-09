@@ -54,6 +54,12 @@ public class EventResponse {
     private BigDecimal teamFundPercent;
     private BigDecimal teamFundAmount;
     private Long createdByUserId;
+    private String createdByName;
+    // Nguồn show (MARKETPLACE = khách đặt qua sàn) và người thầu hưởng hoa hồng với % đã chốt lúc gán.
+    private String source;
+    private Long contractUserId;
+    private String contractUserName;
+    private BigDecimal contractCommissionRate;
     private BigDecimal creatorCommissionAmount;
     private LocalDateTime createdAt;
 }

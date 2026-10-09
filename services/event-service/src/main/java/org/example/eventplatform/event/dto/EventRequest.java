@@ -57,6 +57,9 @@ public class EventRequest {
     @DecimalMin(value = "0.0")
     private BigDecimal depositAmount;
 
+    // Chỉ trưởng đoàn dùng: chọn người thầu khác với người phụ trách khách. Trống = theo người phụ trách khách.
+    private Long contractUserId;
+
     private String vehicleInfo;
 
     // Toạ độ điểm diễn thực tế — dùng để validate bán kính check-in của thành viên.

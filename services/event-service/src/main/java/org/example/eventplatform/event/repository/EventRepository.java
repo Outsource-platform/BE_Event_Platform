@@ -23,9 +23,14 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
     long countByStatus(EventStatus status);
 
-    /** Hoa hồng của thành viên từ các show họ tự tạo và đã hoàn thành. */
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE Event e SET e.contractUserId = e.createdByUserId, e.source = 'TROUPE' WHERE e.contractUserId IS NULL " +
+            "AND e.creatorCommissionAmount IS NOT NULL AND e.createdByUserId IS NOT NULL")
+    int backfillContractFromCreator();
+
+    /** Hoa hồng của người thầu từ các show đã hoàn thành. */
     @Query("SELECT SUM(e.creatorCommissionAmount) FROM Event e WHERE e.tenantId = :tenantId " +
-            "AND e.createdByUserId = :userId AND e.status = org.example.eventplatform.event.entity.EventStatus.COMPLETED")
+            "AND e.contractUserId = :userId AND e.status = org.example.eventplatform.event.entity.EventStatus.COMPLETED")
     java.math.BigDecimal sumCommission(@Param("tenantId") Long tenantId, @Param("userId") Long userId);
 
     List<Event> findByTenantIdAndEventDateBetween(Long tenantId, LocalDate start, LocalDate end);

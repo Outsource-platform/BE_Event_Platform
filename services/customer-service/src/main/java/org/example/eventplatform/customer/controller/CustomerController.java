@@ -2,6 +2,8 @@ package org.example.eventplatform.customer.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.example.eventplatform.customer.dto.AssigneeRequest;
+import org.example.eventplatform.customer.dto.CustomerLookupResponse;
 import org.example.eventplatform.customer.dto.CustomerRequest;
 import org.example.eventplatform.customer.dto.CustomerResponse;
 import org.example.eventplatform.customer.service.CustomerService;
@@ -28,25 +30,43 @@ public class CustomerController {
 
     private final CustomerService customerService;
 
+    private static CustomerService.Caller caller(JwtPrincipal principal) {
+        return new CustomerService.Caller(principal.userId(), principal.tenantId(), principal.authorities().contains("ROLE_ADMIN"));
+    }
+
     @GetMapping
     public ResponseEntity<Page<CustomerResponse>> getCustomers(
             @AuthenticationPrincipal JwtPrincipal principal,
             @RequestParam(required = false) String keyword,
             @PageableDefault(size = 10, sort = "id") Pageable pageable) {
-        return ResponseEntity.ok(customerService.getCustomers(principal.tenantId(), keyword, pageable));
+        return ResponseEntity.ok(customerService.getCustomers(caller(principal), keyword, pageable));
+    }
+
+    /** Tra khách theo số điện thoại đủ số: thành viên dùng để tạo show hộ khách của đồng đội. */
+    @GetMapping("/lookup")
+    public ResponseEntity<CustomerLookupResponse> lookup(@AuthenticationPrincipal JwtPrincipal principal,
+                                                         @RequestParam String phone) {
+        return ResponseEntity.ok(customerService.lookup(phone, caller(principal)));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<CustomerResponse> getById(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable Long id) {
-        return ResponseEntity.ok(customerService.getCustomerById(id, principal.tenantId()));
+        return ResponseEntity.ok(customerService.getCustomerById(id, caller(principal)));
     }
 
     @PostMapping
     public ResponseEntity<CustomerResponse> create(
             @AuthenticationPrincipal JwtPrincipal principal,
             @Valid @RequestBody CustomerRequest request) {
-        CustomerResponse response = customerService.createCustomer(request, principal.tenantId());
+        CustomerResponse response = customerService.createCustomer(request, caller(principal));
         return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    /** Đổi người phụ trách: trưởng đoàn hoặc chính người đang phụ trách. */
+    @PatchMapping("/{id}/assignee")
+    public ResponseEntity<CustomerResponse> assign(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable Long id,
+                                                   @RequestBody AssigneeRequest request) {
+        return ResponseEntity.ok(customerService.assign(id, caller(principal), request.getAssignedToUserId()));
     }
 
     @PutMapping("/{id}")

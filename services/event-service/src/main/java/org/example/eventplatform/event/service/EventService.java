@@ -107,27 +107,38 @@ public class EventService {
             event.setTenantId(principal.tenantId());
             event.setPlatformFee(BigDecimal.ZERO);
             event.setCreatedBy(principal.username());
+            event.setCreatedByUserId(principal.userId());
         } else if (isTenantMember) {
             event.setTenantId(principal.tenantId());
             event.setPlatformFee(BigDecimal.ZERO);
             event.setCreatedBy(principal.username());
             event.setCreatedByUserId(principal.userId());
             event.setStatus(EventStatus.PENDING_APPROVAL);
-
-            IdentityServiceClient.UserContact creator = identityServiceClient.findUser(principal.userId());
-            BigDecimal commissionRate = creator != null ? creator.commissionRate() : null;
-            if (commissionRate != null && request.getTotalAmount() != null) {
-                event.setCreatorCommissionAmount(
-                        request.getTotalAmount().multiply(commissionRate)
-                                .divide(new BigDecimal("100"), 2, java.math.RoundingMode.HALF_UP));
-            }
         } else {
             event.setTenantId(request.getTenantId());
             event.setPlatformFee(calculateDefaultFee(request.getTotalAmount()));
             event.setCreatedBy(principal != null ? principal.username() : "GUEST");
         }
 
+        // Người thầu = người phụ trách khách (trưởng đoàn được chọn người khác). Show khách tự đặt qua sàn thì không có.
+        if (isTenantAdmin || isTenantMember) {
+            event.setSource("TROUPE");
+            Long preferred = isTenantAdmin && request.getContractUserId() != null ? request.getContractUserId() : customer.assignedToUserId();
+            applyContract(event, preferred, request.getContractUserId() != null && isTenantAdmin);
+        }
+
         Event saved = saveWithShowCode(event);
+
+        if (saved.getContractUserId() != null && !saved.getContractUserId().equals(principal.userId())) {
+            notificationPublisher.publish(
+                    "CONTRACT_ASSIGNED",
+                    saved.getContractUserId(),
+                    null,
+                    "Có show mới từ khách của bạn",
+                    memberLabel(principal.userId()) + " vừa tạo show \"" + saved.getName() + "\" cho khách bạn phụ trách — hoa hồng tính cho bạn",
+                    Map.of("eventId", String.valueOf(saved.getId()))
+            );
+        }
 
         if (isTenantMember) {
             notificationPublisher.publish(
@@ -195,6 +206,7 @@ public class EventService {
                 .venueLng(request.getLng())
                 .status(EventStatus.PENDING_APPROVAL)
                 .createdByUserId(principal.userId())
+                .source("MARKETPLACE")
                 .build();
         event.setCreatedBy(principal.username());
 
@@ -221,11 +233,12 @@ public class EventService {
         List<Long> customerIds = customers.stream().map(CustomerServiceClient.CustomerSummary::id).toList();
         List<Event> events = eventRepository.findByCustomerIdInOrderByCreatedAtDesc(customerIds);
         Map<Long, String> names = customerNames(events);
+        Map<Long, String> users = userNames(events);
         // Khách có thể đặt ở nhiều đơn vị: mỗi đơn vị chỉ tra thông tin một lần.
         Map<Long, TenantVendorContext> contexts = new java.util.HashMap<>();
         return events.stream()
                 .map(e -> toResponse(e, contexts.computeIfAbsent(e.getTenantId(),
-                        id -> TenantVendorContext.fetch(id, identityServiceClient, catalogServiceClient)), names))
+                        id -> TenantVendorContext.fetch(id, identityServiceClient, catalogServiceClient)), names, users))
                 .toList();
     }
 
@@ -234,12 +247,58 @@ public class EventService {
         List<Event> events = eventRepository.findByTenantIdAndCustomerIdOrderByEventDateDesc(tenantId, customerId);
         TenantVendorContext ctx = TenantVendorContext.fetch(tenantId, identityServiceClient, catalogServiceClient);
         Map<Long, String> names = customerNames(events);
-        return events.stream().map(event -> toResponse(event, ctx, names)).toList();
+        Map<Long, String> users = userNames(events);
+        return events.stream().map(event -> toResponse(event, ctx, names, users)).toList();
     }
 
     private Event saveWithShowCode(Event event) {
         showCodeService.assign(event);
         return eventRepository.save(event);
+    }
+
+    /**
+     * Gán người thầu và chốt % hoa hồng của họ ngay lúc này. [strict] = trưởng đoàn chủ động chọn: người đó phải thuộc đoàn,
+     * còn người phụ trách khách tự điền thì bỏ qua nếu đã rời đoàn.
+     */
+    private void applyContract(Event event, Long userId, boolean strict) {
+        event.setContractUserId(null);
+        event.setContractCommissionRate(null);
+        event.setCreatorCommissionAmount(null);
+        if (userId == null) {
+            return;
+        }
+        IdentityServiceClient.UserContact user = identityServiceClient.findUser(userId);
+        boolean valid = user != null && event.getTenantId() != null && event.getTenantId().equals(user.tenantId());
+        if (!valid) {
+            if (strict) {
+                throw new IllegalArgumentException("Người thầu phải là thành viên của đoàn");
+            }
+            return;
+        }
+        BigDecimal rate = user.commissionRate();
+        event.setContractUserId(userId);
+        event.setContractCommissionRate(rate);
+        if (rate != null && event.getTotalAmount() != null) {
+            event.setCreatorCommissionAmount(
+                    event.getTotalAmount().multiply(rate).divide(new BigDecimal("100"), 2, java.math.RoundingMode.HALF_UP));
+        }
+    }
+
+    /** Trưởng đoàn đổi người thầu của show (chốt lại % theo người mới) cho tới khi show hoàn thành. */
+    @Transactional
+    public EventResponse updateContract(Long eventId, Long tenantId, Long contractUserId) {
+        Event event = getEventOrThrow(eventId);
+        if (event.getTenantId() == null || !event.getTenantId().equals(tenantId)) {
+            throw new AccessDeniedException("Show này không thuộc đơn vị của bạn");
+        }
+        if ("MARKETPLACE".equals(event.getSource())) {
+            throw new IllegalArgumentException("Show khách đặt qua sàn: hoa hồng về sàn, không có người thầu");
+        }
+        if (event.getStatus() == EventStatus.COMPLETED) {
+            throw new IllegalArgumentException("Show đã hoàn thành, không đổi người thầu được nữa");
+        }
+        applyContract(event, contractUserId, true);
+        return toResponse(eventRepository.save(event));
     }
 
     private BigDecimal calculateDefaultFee(BigDecimal totalAmount) {
@@ -299,7 +358,8 @@ public class EventService {
         TenantVendorContext ctx = TenantVendorContext.fetch(tenantId, identityServiceClient, catalogServiceClient);
         Page<Event> page = eventRepository.findByTenantId(tenantId, pageable);
         Map<Long, String> names = customerNames(page.getContent());
-        return page.map(e -> toResponse(e, ctx, names));
+        Map<Long, String> users = userNames(page.getContent());
+        return page.map(e -> toResponse(e, ctx, names, users));
     }
 
     @Transactional(readOnly = true)
@@ -309,7 +369,8 @@ public class EventService {
         TenantVendorContext ctx = TenantVendorContext.fetch(tenantId, identityServiceClient, catalogServiceClient);
         Page<Event> page = eventRepository.findByTenantIdAndEventDateBetween(tenantId, start, end, pageable);
         Map<Long, String> names = customerNames(page.getContent());
-        return page.map(e -> toResponse(e, ctx, names));
+        Map<Long, String> users = userNames(page.getContent());
+        return page.map(e -> toResponse(e, ctx, names, users));
     }
 
     @Transactional(readOnly = true)
@@ -707,6 +768,34 @@ public class EventService {
 
     /** {@code customerNames} null nghĩa là chưa tra trước: tự tra từng khách (dùng cho một show đơn lẻ). */
     private EventResponse toResponse(Event event, TenantVendorContext ctx, Map<Long, String> customerNames) {
+        return toResponse(event, ctx, customerNames, null);
+    }
+
+    /** Tên người trong danh sách show: tra một lần theo lô; null nghĩa là tra riêng từng người (một show đơn lẻ). */
+    private Map<Long, String> userNames(java.util.Collection<Event> events) {
+        java.util.Set<Long> ids = new java.util.HashSet<>();
+        for (Event e : events) {
+            if (e.getCreatedByUserId() != null && !"MARKETPLACE".equals(e.getSource())) ids.add(e.getCreatedByUserId());
+            if (e.getContractUserId() != null) ids.add(e.getContractUserId());
+        }
+        Map<Long, String> out = new java.util.HashMap<>();
+        identityServiceClient.findUsersByIds(ids).forEach((id, u) -> out.put(id, displayName(u)));
+        return out;
+    }
+
+    private String userName(Long id, Map<Long, String> userNames) {
+        if (userNames != null) {
+            return userNames.get(id);
+        }
+        IdentityServiceClient.UserContact u = identityServiceClient.findUser(id);
+        return u == null ? null : displayName(u);
+    }
+
+    private static String displayName(IdentityServiceClient.UserContact u) {
+        return u.fullName() != null && !u.fullName().isBlank() ? u.fullName() : u.username();
+    }
+
+    private EventResponse toResponse(Event event, TenantVendorContext ctx, Map<Long, String> customerNames, Map<Long, String> userNames) {
         EventResponse response = EventResponse.builder()
                 .id(event.getId())
                 .showCode(event.getShowCode())
@@ -739,6 +828,9 @@ public class EventService {
                 .teamFundPercent(event.getTeamFundPercent())
                 .teamFundAmount(computeTeamFundAmount(event.getTeamFundPercent(), event.getTotalAmount()))
                 .createdByUserId(event.getCreatedByUserId())
+                .source(event.getSource())
+                .contractUserId(event.getContractUserId())
+                .contractCommissionRate(event.getContractCommissionRate())
                 .creatorCommissionAmount(event.getCreatorCommissionAmount())
                 .createdAt(event.getCreatedAt())
                 .build();
@@ -752,6 +844,12 @@ public class EventService {
                     response.setCustomerName(customer.fullName());
                 }
             }
+        }
+        if (!"MARKETPLACE".equals(event.getSource()) && event.getCreatedByUserId() != null) {
+            response.setCreatedByName(userName(event.getCreatedByUserId(), userNames));
+        }
+        if (event.getContractUserId() != null) {
+            response.setContractUserName(userName(event.getContractUserId(), userNames));
         }
         if (ctx.tenant() != null) {
             response.setTenantName(ctx.tenant().name());

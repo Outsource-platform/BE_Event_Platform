@@ -18,4 +18,5 @@ public class CustomerSummaryResponse {
     private String phone;
     private String email;
     private Long userId;
+    private Long assignedToUserId;
 }

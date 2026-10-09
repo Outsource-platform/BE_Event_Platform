@@ -39,16 +39,17 @@ public class PayoutService {
         ue.setNetAmount(gross.subtract(fund));
     }
 
-    /** Chốt hoa hồng của người tạo show theo % hiện tại trên hồ sơ của họ. Không có % thì giữ nguyên số cũ. */
+    /**
+     * Hoa hồng của người thầu = tổng tiền show hiện tại × % đã chốt lúc gán người thầu (đổi % trên hồ sơ về sau không ảnh hưởng).
+     * Show cũ chưa có % chốt thì giữ nguyên số đã tính lúc tạo.
+     */
     public void settleCommission(Event event) {
-        if (event.getCreatedByUserId() == null || event.getTotalAmount() == null) {
+        BigDecimal rate = event.getContractCommissionRate();
+        if (event.getContractUserId() == null || rate == null || event.getTotalAmount() == null) {
             return;
         }
-        IdentityServiceClient.UserContact creator = identityServiceClient.findUser(event.getCreatedByUserId());
-        BigDecimal rate = creator == null ? null : creator.commissionRate();
-        if (rate == null || rate.signum() <= 0) {
-            return;
-        }
-        event.setCreatorCommissionAmount(event.getTotalAmount().multiply(rate).divide(HUNDRED, 2, RoundingMode.HALF_UP));
+        event.setCreatorCommissionAmount(rate.signum() <= 0
+                ? null
+                : event.getTotalAmount().multiply(rate).divide(HUNDRED, 2, RoundingMode.HALF_UP));
     }
 }

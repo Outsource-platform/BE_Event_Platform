@@ -15,10 +15,12 @@ import java.util.Optional;
 public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
     @Query("SELECT c FROM Customer c WHERE c.tenantId = :tenantId AND " +
+            "(:ownerId IS NULL OR c.assignedToUserId = :ownerId) AND " +
             "(:keyword IS NULL OR :keyword = '' OR " +
             "LOWER(c.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
             "c.phone LIKE CONCAT('%', :keyword, '%'))")
     Page<Customer> searchCustomers(@Param("tenantId") Long tenantId,
+                                    @Param("ownerId") Long ownerId,
                                     @Param("keyword") String keyword,
                                     Pageable pageable);
 

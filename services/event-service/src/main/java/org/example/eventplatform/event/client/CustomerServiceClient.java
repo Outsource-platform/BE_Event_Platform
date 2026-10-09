@@ -134,6 +134,6 @@ public class CustomerServiceClient {
         }
     }
 
-    public record CustomerSummary(Long id, Long tenantId, String fullName, String phone, String email, Long userId) {
+    public record CustomerSummary(Long id, Long tenantId, String fullName, String phone, String email, Long userId, Long assignedToUserId) {
     }
 }

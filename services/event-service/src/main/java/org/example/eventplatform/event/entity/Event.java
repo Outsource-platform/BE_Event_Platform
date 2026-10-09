@@ -103,11 +103,22 @@ public class Event extends BaseEntity {
     @Column(name = "team_fund_percent")
     private BigDecimal teamFundPercent;
 
-    // Set only when a TN_MEMBER self-creates the show (not the tenant admin,
-    // not a platform push) — distinct from the display-only `createdBy`
-    // username string, needed as a real FK to look up/pay the commission.
+    // Người của đoàn nhập show vào hệ thống (trưởng đoàn hay thành viên). Chỉ để tra cứu: hoa hồng theo
+    // người thầu (contractUserId), không theo người bấm tạo. Show đặt từ sàn thì ô này giữ id của khách (cũ).
     @Column(name = "created_by_user_id")
     private Long createdByUserId;
+
+    // MARKETPLACE: khách tự đặt qua sàn (hoa hồng về sàn, không có người thầu); trống/TROUPE: đoàn tự nhập.
+    @Column(name = "source", length = 20)
+    private String source;
+
+    // Người thầu show = người phụ trách khách lúc tạo show (trưởng đoàn sửa được tới khi hoàn thành).
+    // Tỉ lệ hoa hồng được chốt ngay lúc gán để đổi % về sau không ảnh hưởng show này.
+    @Column(name = "contract_user_id")
+    private Long contractUserId;
+
+    @Column(name = "contract_commission_rate", precision = 5, scale = 2)
+    private BigDecimal contractCommissionRate;
 
     @Column(name = "creator_commission_amount")
     private BigDecimal creatorCommissionAmount;

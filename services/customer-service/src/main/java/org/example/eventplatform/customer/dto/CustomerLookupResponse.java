@@ -5,26 +5,20 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.example.eventplatform.customer.entity.CustomerType;
 
-import java.time.LocalDateTime;
-
+/**
+ * Kết quả tra khách theo số điện thoại cho thành viên: đủ để chọn đúng khách khi tạo show hộ,
+ * không lộ số điện thoại, email, địa chỉ hay ghi chú của khách người khác.
+ */
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CustomerResponse {
+public class CustomerLookupResponse {
     private Long id;
     private String fullName;
-    private String phone;
-    private String email;
-    private String address;
-    private CustomerType type;
-    private String note;
-    private boolean active;
     private Long assignedToUserId;
     private String assignedToName;
-    private Long tenantId;
-    private LocalDateTime createdAt;
+    private boolean mine;
 }

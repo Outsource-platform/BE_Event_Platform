@@ -4,6 +4,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.example.eventplatform.identity.dto.user.CreateMemberRequest;
 import org.example.eventplatform.identity.dto.user.MemberResponse;
+import org.example.eventplatform.identity.dto.user.TeammateResponse;
 import org.example.eventplatform.identity.entity.Role;
 import org.example.eventplatform.identity.entity.User;
 import org.example.eventplatform.identity.entity.UserStatus;
@@ -36,6 +37,17 @@ public class UserService {
     @Transactional(readOnly = true)
     public Page<MemberResponse> listTenantMembers(Long tenantId, Pageable pageable) {
         return userRepository.findByTenantId(tenantId, pageable).map(this::toResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.List<TeammateResponse> listTeammates(Long tenantId) {
+        return userRepository.findByTenantId(tenantId, org.springframework.data.domain.Pageable.unpaged()).stream()
+                .filter(u -> u.getStatus() == null || u.getStatus() == org.example.eventplatform.identity.entity.UserStatus.ACTIVE)
+                .map(u -> new TeammateResponse(u.getId(),
+                        u.getFullName() != null && !u.getFullName().isBlank() ? u.getFullName() : u.getUsername(),
+                        u.getRoles() != null ? u.getRoles().getName() : null))
+                .sorted(java.util.Comparator.comparing(TeammateResponse::fullName, String.CASE_INSENSITIVE_ORDER))
+                .toList();
     }
 
     @Transactional(readOnly = true)

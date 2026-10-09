@@ -42,6 +42,7 @@ public class InternalController {
                 .phone(customer.getPhone())
                 .email(customer.getEmail())
                 .userId(customer.getUserId())
+                .assignedToUserId(customer.getAssignedToUserId())
                 .build());
     }
 

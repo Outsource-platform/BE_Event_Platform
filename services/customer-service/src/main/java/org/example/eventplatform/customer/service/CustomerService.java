@@ -2,6 +2,8 @@ package org.example.eventplatform.customer.service;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.example.eventplatform.customer.client.IdentityServiceClient;
+import org.example.eventplatform.customer.dto.CustomerLookupResponse;
 import org.example.eventplatform.customer.dto.CustomerRequest;
 import org.example.eventplatform.customer.dto.CustomerResponse;
 import org.example.eventplatform.customer.dto.internal.CustomerSummaryResponse;
@@ -15,17 +17,30 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
+    private final IdentityServiceClient identityServiceClient;
+
+    /** Người đang gọi: thành viên chỉ thấy và làm việc với khách mình phụ trách, trưởng đoàn thấy cả đoàn. */
+    public record Caller(Long userId, Long tenantId, boolean admin) {
+    }
 
     @Transactional
-    public CustomerResponse createCustomer(CustomerRequest request, Long tenantId) {
-        if (customerRepository.existsByPhoneAndTenantId(request.getPhone(), tenantId)) {
-            throw new RuntimeException("Số điện thoại này đã tồn tại trong hệ thống của bạn");
+    public CustomerResponse createCustomer(CustomerRequest request, Caller caller) {
+        var existing = customerRepository.findByPhoneAndTenantId(request.getPhone(), caller.tenantId());
+        if (existing.isPresent()) {
+            throw new IllegalArgumentException(duplicateMessage(existing.get()));
+        }
+
+        // Thành viên tạo khách thì khách là của người đó; trưởng đoàn tạo thì để trống (khách của đoàn) hoặc chọn người phụ trách.
+        Long owner = caller.admin() ? request.getAssignedToUserId() : caller.userId();
+        if (owner != null) {
+            requireTroupeMember(owner, caller.tenantId());
         }
 
         Customer customer = Customer.builder()
@@ -35,22 +50,34 @@ public class CustomerService {
                 .address(request.getAddress())
                 .type(request.getType())
                 .note(request.getNote())
-                .assignedToUserId(request.getAssignedToUserId())
-                .tenantId(tenantId)
+                .assignedToUserId(owner)
+                .tenantId(caller.tenantId())
                 .active(true)
                 .build();
 
-        return toResponse(customerRepository.save(customer));
+        return toResponse(customerRepository.save(customer), names(List.of(customer)));
+    }
+
+    private String duplicateMessage(Customer existing) {
+        String owner = existing.getAssignedToUserId() == null ? null
+                : identityServiceClient.findUsers(List.of(existing.getAssignedToUserId())).values().stream()
+                        .findFirst().map(IdentityServiceClient.UserInfo::displayName).orElse(null);
+        return owner == null
+                ? "Số điện thoại này đã có trong danh sách khách của đoàn"
+                : "Khách này đã có người phụ trách là " + owner + ". Hãy tra theo số điện thoại để tạo show cho khách đó";
     }
 
     @Transactional(readOnly = true)
-    public Page<CustomerResponse> getCustomers(Long tenantId, String keyword, Pageable pageable) {
-        return customerRepository.searchCustomers(tenantId, keyword, pageable).map(this::toResponse);
+    public Page<CustomerResponse> getCustomers(Caller caller, String keyword, Pageable pageable) {
+        Page<Customer> page = customerRepository.searchCustomers(caller.tenantId(), caller.admin() ? null : caller.userId(), keyword, pageable);
+        Map<Long, String> names = names(page.getContent());
+        return page.map(c -> toResponse(c, names));
     }
 
     @Transactional(readOnly = true)
-    public CustomerResponse getCustomerById(Long id, Long tenantId) {
-        return toResponse(getOrThrow(id, tenantId));
+    public CustomerResponse getCustomerById(Long id, Caller caller) {
+        Customer customer = getVisible(id, caller);
+        return toResponse(customer, names(List.of(customer)));
     }
 
     @Transactional
@@ -59,7 +86,7 @@ public class CustomerService {
 
         if (!existing.getPhone().equals(request.getPhone())
                 && customerRepository.existsByPhoneAndTenantId(request.getPhone(), tenantId)) {
-            throw new RuntimeException("Số điện thoại mới đã bị trùng trong hệ thống");
+            throw new IllegalArgumentException("Số điện thoại mới đã bị trùng trong hệ thống");
         }
 
         existing.setFullName(request.getFullName());
@@ -68,9 +95,66 @@ public class CustomerService {
         existing.setAddress(request.getAddress());
         existing.setType(request.getType());
         existing.setNote(request.getNote());
-        existing.setAssignedToUserId(request.getAssignedToUserId());
+        // Người phụ trách đổi qua assign(), không bị xoá nhầm khi sửa thông tin liên hệ.
 
-        return toResponse(customerRepository.save(existing));
+        Customer saved = customerRepository.save(existing);
+        return toResponse(saved, names(List.of(saved)));
+    }
+
+    /** Trưởng đoàn đổi người phụ trách bất kỳ lúc nào; người đang phụ trách chuyển cho đồng đội khác. */
+    @Transactional
+    public CustomerResponse assign(Long id, Caller caller, Long newOwner) {
+        Customer customer = getVisible(id, caller);
+        if (newOwner == null && !caller.admin()) {
+            throw new IllegalArgumentException("Chỉ trưởng đoàn mới bỏ người phụ trách của khách");
+        }
+        if (newOwner != null) {
+            requireTroupeMember(newOwner, caller.tenantId());
+        }
+        customer.setAssignedToUserId(newOwner);
+        Customer saved = customerRepository.save(customer);
+        return toResponse(saved, names(List.of(saved)));
+    }
+
+    /**
+     * Tra khách theo số điện thoại đúng từng chữ số, để thành viên tạo show hộ khách của đồng đội
+     * mà không phải xem cả danh sách khách của người khác. Chỉ trả tên và người phụ trách.
+     */
+    @Transactional(readOnly = true)
+    public CustomerLookupResponse lookup(String phone, Caller caller) {
+        Customer customer = customerRepository.findByPhoneAndTenantId(phone == null ? "" : phone.trim(), caller.tenantId())
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách có số điện thoại này"));
+        Map<Long, String> names = names(List.of(customer));
+        return CustomerLookupResponse.builder()
+                .id(customer.getId())
+                .fullName(customer.getFullName())
+                .assignedToUserId(customer.getAssignedToUserId())
+                .assignedToName(names.get(customer.getAssignedToUserId()))
+                .mine(caller.userId().equals(customer.getAssignedToUserId()))
+                .build();
+    }
+
+    private void requireTroupeMember(Long userId, Long tenantId) {
+        var user = identityServiceClient.findUsers(List.of(userId)).get(userId);
+        if (user == null || !tenantId.equals(user.tenantId())) {
+            throw new IllegalArgumentException("Người phụ trách phải là thành viên của đoàn");
+        }
+    }
+
+    private Customer getVisible(Long id, Caller caller) {
+        Customer customer = getOrThrow(id, caller.tenantId());
+        if (!caller.admin() && !caller.userId().equals(customer.getAssignedToUserId())) {
+            throw new EntityNotFoundException("Không tìm thấy khách hàng");
+        }
+        return customer;
+    }
+
+    private Map<Long, String> names(List<Customer> customers) {
+        java.util.Set<Long> ids = customers.stream().map(Customer::getAssignedToUserId).filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
+        Map<Long, String> out = new java.util.HashMap<>();
+        identityServiceClient.findUsers(ids).forEach((id, u) -> out.put(id, u.displayName()));
+        return out;
     }
 
     @Transactional
@@ -134,6 +218,7 @@ public class CustomerService {
                 .phone(customer.getPhone())
                 .email(customer.getEmail())
                 .userId(customer.getUserId())
+                .assignedToUserId(customer.getAssignedToUserId())
                 .build();
     }
 
@@ -142,7 +227,7 @@ public class CustomerService {
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách hàng"));
     }
 
-    private CustomerResponse toResponse(Customer customer) {
+    private CustomerResponse toResponse(Customer customer, Map<Long, String> names) {
         return CustomerResponse.builder()
                 .id(customer.getId())
                 .fullName(customer.getFullName())
@@ -153,6 +238,7 @@ public class CustomerService {
                 .note(customer.getNote())
                 .active(customer.isActive())
                 .assignedToUserId(customer.getAssignedToUserId())
+                .assignedToName(customer.getAssignedToUserId() == null ? null : names.get(customer.getAssignedToUserId()))
                 .tenantId(customer.getTenantId())
                 .createdAt(customer.getCreatedAt())
                 .build();

@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.example.eventplatform.identity.dto.auth.UpdateBankAccountRequest;
 import org.example.eventplatform.identity.dto.user.CreateMemberRequest;
 import org.example.eventplatform.identity.dto.user.MemberResponse;
+import org.example.eventplatform.identity.dto.user.TeammateResponse;
 import org.example.eventplatform.identity.dto.user.UpdateAvailabilityRequest;
 import org.example.eventplatform.identity.dto.user.UpdateCommissionRateRequest;
 import org.example.eventplatform.identity.dto.user.UpdateFinanceProfileRequest;
@@ -36,6 +37,13 @@ public class UserController {
             @AuthenticationPrincipal JwtPrincipal principal,
             @PageableDefault(size = 20, sort = "fullName") Pageable pageable) {
         return ResponseEntity.ok(userService.listTenantMembers(principal.tenantId(), pageable));
+    }
+
+    /** Danh sách đồng đội (chỉ id, tên, vai trò) để chọn người nhận khách hay người thầu; thành viên cũng dùng được. */
+    @GetMapping("/teammates")
+    @PreAuthorize("hasAnyRole('ADMIN','TN_MEMBER')")
+    public ResponseEntity<java.util.List<TeammateResponse>> teammates(@AuthenticationPrincipal JwtPrincipal principal) {
+        return ResponseEntity.ok(userService.listTeammates(principal.tenantId()));
     }
 
     @PostMapping
