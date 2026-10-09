@@ -54,3 +54,12 @@
 - Màu lấy từ theme của app/web (đoàn có màu thương hiệu riêng), không hard-code màu.
 - Màn hình quan trọng cho việc chốt show (chi tiết show) phải để nút hành động **cố định, thấy ngay**, không bắt người dùng cuộn mới thấy.
 - Trạng thái rỗng, đang tải, lỗi đều phải có giao diện rõ ràng; lỗi mạng không được làm app văng.
+
+## 8. Thời gian (quy ước đã chốt 2026-10-09)
+
+- **Backend lưu và trả UTC.** Mốc do server sinh (tạo, sửa, điểm danh, xử lý, gửi tin...) dùng `Clocks.utcNow()` / `Clocks.utcNowTime()` (`shared-common`), **không** dùng `LocalDateTime.now()` trần. Khi trả ra API, `LocalDateTime` luôn có dạng `2026-10-09T03:15:00Z` (có `T` và `Z`); giờ-trong-ngày do server sinh (điểm danh) dùng `@JsonSerialize(using = UtcTimeSerializer.class)` để ra `03:15:00Z`.
+- **App và web đổi sang giờ Việt Nam khi thấy `Z`.** App dùng `parseServerDateTime`, `formatServerClock` (`lib/core/utils/server_time.dart`); web dùng `formatDate`, `formatDateTime`, `formatTime` (`src/lib/format.ts`, chỉ định múi giờ `Asia/Ho_Chi_Minh` rõ ràng). Không tự `+7` rải rác.
+- **Giờ do người dùng nhập** (ngày diễn, giờ bắt đầu, giờ tập trung) là giờ tường ở Việt Nam, **không có `Z`** và không bao giờ bị đổi múi giờ.
+- Muốn so giờ người dùng nhập với "bây giờ" hoặc viết giờ vào câu chữ thông báo thì dùng `Clocks.vnNowTime()` / `Clocks.vnToday()` (không so với giờ UTC).
+- Không đổi múi giờ của JVM hay container để "chữa" lỗi giờ; dữ liệu cũ đã là UTC.
+
