@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +21,8 @@ import java.util.List;
  * Bootstraps baseline roles and the first SUPER_ADMIN so the platform is
  * testable from a blank database without a separate seed script.
  */
+// Phải chạy trước mọi bộ nạp khác (vd DemoDataSeeder cần vai trò ADMIN đã tồn tại): ApplicationRunner không có @Order chạy sau cùng.
+@Order(0)
 @Component
 @RequiredArgsConstructor
 @Slf4j
