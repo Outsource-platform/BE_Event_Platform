@@ -52,6 +52,7 @@ public class EventService {
     private final ShowPackageRepository showPackageRepository;
     private final CrewRoleRepository crewRoleRepository;
     private final NotificationPublisher notificationPublisher;
+    private final PayoutService payoutService;
     private final ShowCodeService showCodeService;
     private final IdentityServiceClient identityServiceClient;
     private final CustomerServiceClient customerServiceClient;
@@ -390,8 +391,17 @@ public class EventService {
             userEvent.setEvent(event);
             userEvent.setUserId(req.getUserId());
             userEvent.setPosition(position);
+            boolean fresh = userEvent.getId() == null;
             userEvent.setCrewRoleId(req.getCrewRoleId());
             userEvent.setStatus(AssignStatus.PENDING);
+            // Gán vào vị trí có mức cát-xê thì tự có mức đó; sau này trưởng đoàn chỉ chỉnh xuống, không vượt mức trần.
+            if (role != null && role.getCastFee() != null && role.getCastFee().signum() > 0
+                    && (fresh || userEvent.getSalary() == null || userEvent.getSalary().signum() == 0)) {
+                userEvent.getPayrollItems().clear();
+                userEvent.getPayrollItems().add(UserEventPayrollItem.builder()
+                        .userEvent(userEvent).label("Cát-xê vị trí " + role.getName()).amount(role.getCastFee()).build());
+                userEvent.setSalary(role.getCastFee());
+            }
             userEventRepository.save(userEvent);
 
             notificationPublisher.publish(
@@ -522,6 +532,7 @@ public class EventService {
 
         ue.setCheckoutAt(Clocks.utcNowTime());
         ue.setStatus(AssignStatus.COMPLETED);
+        payoutService.settleAssignment(ue);
         userEventRepository.save(ue);
 
         autoCompleteEventIfFinished(ue.getEvent().getId());
@@ -555,7 +566,16 @@ public class EventService {
                     .build());
             total = total.add(item.getAmount());
         }
+        // Vị trí có mức trần cát-xê thì tiền công không được vượt mức đó.
+        CrewRole role = ue.getCrewRoleId() == null ? null : crewRoleRepository.findById(ue.getCrewRoleId()).orElse(null);
+        if (role != null && role.getCastFee() != null && role.getCastFee().signum() > 0 && total.compareTo(role.getCastFee()) > 0) {
+            throw new IllegalArgumentException("Tiền công vượt mức trần của vị trí \"" + role.getName() + "\" (" + role.getCastFee().toPlainString() + ")");
+        }
         ue.setSalary(total);
+        // Show đã hoàn thành mà sửa tiền công thì chốt lại phần trừ quỹ theo số mới.
+        if (ue.getStatus() == AssignStatus.COMPLETED) {
+            payoutService.settleAssignment(ue);
+        }
         UserEvent saved = userEventRepository.save(ue);
 
         Map<Long, IdentityServiceClient.UserContact> users = identityServiceClient.findUsersByIds(Set.of(saved.getUserId()));
@@ -575,6 +595,7 @@ public class EventService {
         if (finished) {
             Event event = getEventOrThrow(eventId);
             event.setStatus(EventStatus.COMPLETED);
+            payoutService.settleCommission(event);
             eventRepository.save(event);
 
             notificationPublisher.publish(
@@ -788,6 +809,10 @@ public class EventService {
                 .userFullName(self != null ? self.fullName() : null)
                 .position(ue.getPosition())
                 .crewRoleId(ue.getCrewRoleId())
+                .roleCastFee(ownRole != null ? ownRole.getCastFee() : null)
+                .fundPercent(ue.getFundPercent())
+                .fundAmount(ue.getFundAmount())
+                .netAmount(ue.getNetAmount())
                 .crewRoleDepartment(ownRole != null ? ownRole.getDepartment() : null)
                 .crewRoleName(ownRole != null ? ownRole.getName() : null)
                 .status(ue.getStatus())

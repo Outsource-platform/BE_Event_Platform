@@ -19,4 +19,6 @@ public class CrewRoleRequest {
     private String name;
 
     private String description;
+    @jakarta.validation.constraints.DecimalMin(value = "0.0", message = "Cát-xê không được âm")
+    private java.math.BigDecimal castFee;
 }

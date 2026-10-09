@@ -7,6 +7,7 @@ import org.example.eventplatform.identity.dto.user.CreateMemberRequest;
 import org.example.eventplatform.identity.dto.user.MemberResponse;
 import org.example.eventplatform.identity.dto.user.UpdateAvailabilityRequest;
 import org.example.eventplatform.identity.dto.user.UpdateCommissionRateRequest;
+import org.example.eventplatform.identity.dto.user.UpdateFinanceProfileRequest;
 import org.example.eventplatform.identity.service.UserService;
 import org.example.eventplatform.shared.security.JwtPrincipal;
 import org.springframework.data.domain.Page;
@@ -69,6 +70,16 @@ public class UserController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateCommissionRateRequest request) {
         return ResponseEntity.ok(userService.updateCommissionRate(principal.tenantId(), id, request.getCommissionRate()));
+    }
+
+    @PatchMapping("/{id}/finance")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<MemberResponse> updateFinanceProfile(
+            @AuthenticationPrincipal JwtPrincipal principal,
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateFinanceProfileRequest request) {
+        return ResponseEntity.ok(userService.updateFinanceProfile(principal.tenantId(), id, request.getJoinedDate(),
+                request.getSeniority(), request.getTeamFundPercent(), request.getCommissionRate()));
     }
 
     @PatchMapping("/{id}/bank-account")

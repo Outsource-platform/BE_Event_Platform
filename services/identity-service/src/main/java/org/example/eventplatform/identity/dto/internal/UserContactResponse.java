@@ -22,6 +22,9 @@ public class UserContactResponse {
     private String email;
     private AvailabilityStatus availabilityStatus;
     private BigDecimal commissionRate;
+    private BigDecimal teamFundPercent;
+    private java.time.LocalDate joinedDate;
+    private Integer seniority;
     private String bankName;
     private String bankAccountNumber;
     private String bankAccountHolder;

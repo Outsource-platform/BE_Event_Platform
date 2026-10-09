@@ -16,4 +16,5 @@ public class CrewRoleResponse {
     private String department;
     private String name;
     private String description;
+    private java.math.BigDecimal castFee;
 }

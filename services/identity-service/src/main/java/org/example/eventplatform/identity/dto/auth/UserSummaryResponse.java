@@ -24,6 +24,9 @@ public class UserSummaryResponse {
     private String roleName;
     private Set<String> authorities;
     private BigDecimal commissionRate;
+    private BigDecimal teamFundPercent;
+    private java.time.LocalDate joinedDate;
+    private Integer seniority;
     private String category;
     private String province;
     private String ward;

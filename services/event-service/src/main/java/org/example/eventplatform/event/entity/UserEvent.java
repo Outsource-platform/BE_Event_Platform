@@ -62,6 +62,17 @@ public class UserEvent {
     @Builder.Default
     private BigDecimal salary = BigDecimal.ZERO;
 
+    // Chốt lúc hoàn thành show: % quỹ đoàn của thành viên khi đó, số tiền quỹ bị trừ và số điểm thực nhận.
+    // Chốt lại để đổi % về sau không làm thay đổi lịch sử. Show cũ chưa chốt thì ví dùng thẳng salary.
+    @Column(name = "fund_percent", precision = 5, scale = 2)
+    private BigDecimal fundPercent;
+
+    @Column(name = "fund_amount", precision = 15, scale = 2)
+    private BigDecimal fundAmount;
+
+    @Column(name = "net_amount", precision = 15, scale = 2)
+    private BigDecimal netAmount;
+
     @OneToMany(mappedBy = "userEvent", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<UserEventPayrollItem> payrollItems = new ArrayList<>();

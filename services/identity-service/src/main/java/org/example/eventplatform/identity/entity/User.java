@@ -35,7 +35,16 @@ public class User extends BaseEntity {
     private String email;
     private String phone;
     private String fullName;
+    // Số năm kinh nghiệm do trưởng đoàn nhập tay (có thể khác ngày vào đoàn: vào muộn nhưng đã làm nghề nhiều năm).
     private Integer seniority;
+
+    // Ngày vào đoàn do trưởng đoàn nhập; từ đó app tính thâm niên trong đoàn.
+    @Column(name = "joined_date")
+    private java.time.LocalDate joinedDate;
+
+    // % quỹ đoàn trừ vào cát-xê của người này, do trưởng đoàn gán dựa trên thâm niên. Trống hoặc 0 là không trừ.
+    @Column(name = "team_fund_percent", precision = 5, scale = 2)
+    private java.math.BigDecimal teamFundPercent;
 
     /** Để trưởng đoàn chuyển khoản khi duyệt rút điểm. Không đưa ra API công khai. */
     @Column(name = "bank_name")

@@ -29,4 +29,8 @@ public class CrewRole extends BaseEntity {
 
     @Column(columnDefinition = "TEXT")
     private String description;
+
+    // Mức trần cát-xê của vị trí. Gán người vào vị trí này là tự có mức này; để trống thì trưởng đoàn nhập tay như trước.
+    @Column(name = "cast_fee", precision = 15, scale = 2)
+    private java.math.BigDecimal castFee;
 }

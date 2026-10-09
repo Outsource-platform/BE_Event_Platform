@@ -30,6 +30,11 @@ public class AssignmentResponse {
     private String userFullName;
     private String position;
     private Long crewRoleId;
+    // Mức trần cát-xê của vị trí và số liệu đã chốt khi hoàn thành (quỹ đoàn, thực nhận).
+    private java.math.BigDecimal roleCastFee;
+    private java.math.BigDecimal fundPercent;
+    private java.math.BigDecimal fundAmount;
+    private java.math.BigDecimal netAmount;
     private String crewRoleDepartment;
     private String crewRoleName;
     private AssignStatus status;

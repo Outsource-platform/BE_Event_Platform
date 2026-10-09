@@ -29,6 +29,7 @@ public class CrewRoleService {
                 .department(request.getDepartment())
                 .name(request.getName())
                 .description(request.getDescription())
+                .castFee(request.getCastFee())
                 .build();
         return toResponse(crewRoleRepository.save(role));
     }
@@ -39,6 +40,7 @@ public class CrewRoleService {
         role.setDepartment(request.getDepartment());
         role.setName(request.getName());
         role.setDescription(request.getDescription());
+        role.setCastFee(request.getCastFee());
         return toResponse(crewRoleRepository.save(role));
     }
 
@@ -58,6 +60,7 @@ public class CrewRoleService {
                 .department(role.getDepartment())
                 .name(role.getName())
                 .description(role.getDescription())
+                .castFee(role.getCastFee())
                 .build();
     }
 }

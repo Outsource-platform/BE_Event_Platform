@@ -12,6 +12,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import org.example.eventplatform.event.dto.WalletSummary;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
@@ -24,8 +25,8 @@ public class WithdrawalController {
     private final WithdrawalService withdrawalService;
 
     @GetMapping("/my-balance")
-    public ResponseEntity<Map<String, BigDecimal>> myBalance(@AuthenticationPrincipal JwtPrincipal principal) {
-        return ResponseEntity.ok(Map.of("available", withdrawalService.availableBalance(principal.tenantId(), principal.userId())));
+    public ResponseEntity<WalletSummary> myBalance(@AuthenticationPrincipal JwtPrincipal principal) {
+        return ResponseEntity.ok(withdrawalService.wallet(principal.tenantId(), principal.userId()));
     }
 
     @PostMapping

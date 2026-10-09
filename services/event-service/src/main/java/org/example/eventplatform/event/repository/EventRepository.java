@@ -23,6 +23,11 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
     long countByStatus(EventStatus status);
 
+    /** Hoa hồng của thành viên từ các show họ tự tạo và đã hoàn thành. */
+    @Query("SELECT SUM(e.creatorCommissionAmount) FROM Event e WHERE e.tenantId = :tenantId " +
+            "AND e.createdByUserId = :userId AND e.status = org.example.eventplatform.event.entity.EventStatus.COMPLETED")
+    java.math.BigDecimal sumCommission(@Param("tenantId") Long tenantId, @Param("userId") Long userId);
+
     List<Event> findByTenantIdAndEventDateBetween(Long tenantId, LocalDate start, LocalDate end);
 
     Page<Event> findByTenantIdAndEventDateBetween(Long tenantId, LocalDate start, LocalDate end, Pageable pageable);

@@ -31,7 +31,16 @@ public interface UserEventRepository extends JpaRepository<UserEvent, Long> {
             "AND ue.userId = :userId AND (ue.status = 'ACCEPTED' OR ue.status = 'CHECKIN_CONCENTRATE')")
     long countPendingShows(@Param("tenantId") Long tenantId, @Param("userId") Long userId);
 
-    @Query("SELECT SUM(ue.salary) FROM UserEvent ue WHERE ue.event.tenantId = :tenantId " +
+    /** Điểm thực nhận từ các show đã hoàn thành: số đã chốt (sau khi trừ quỹ), show cũ chưa chốt thì lấy salary. */
+    @Query("SELECT SUM(COALESCE(ue.netAmount, ue.salary)) FROM UserEvent ue WHERE ue.event.tenantId = :tenantId " +
             "AND ue.userId = :userId AND ue.status = 'COMPLETED'")
     BigDecimal sumTotalEarnings(@Param("tenantId") Long tenantId, @Param("userId") Long userId);
+
+    @Query("SELECT SUM(ue.salary) FROM UserEvent ue WHERE ue.event.tenantId = :tenantId " +
+            "AND ue.userId = :userId AND ue.status = 'COMPLETED'")
+    BigDecimal sumGrossEarnings(@Param("tenantId") Long tenantId, @Param("userId") Long userId);
+
+    @Query("SELECT SUM(ue.fundAmount) FROM UserEvent ue WHERE ue.event.tenantId = :tenantId " +
+            "AND ue.userId = :userId AND ue.status = 'COMPLETED'")
+    BigDecimal sumFundDeducted(@Param("tenantId") Long tenantId, @Param("userId") Long userId);
 }

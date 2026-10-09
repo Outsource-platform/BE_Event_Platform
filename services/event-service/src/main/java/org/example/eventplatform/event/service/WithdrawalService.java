@@ -5,6 +5,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.example.eventplatform.event.client.IdentityServiceClient;
 import org.example.eventplatform.event.dto.WithdrawalCreateRequest;
+import org.example.eventplatform.event.dto.WalletSummary;
 import org.example.eventplatform.event.dto.WithdrawalResponse;
 import org.example.eventplatform.event.entity.WithdrawalRequest;
 import org.example.eventplatform.event.entity.WithdrawalStatus;
@@ -30,14 +31,28 @@ public class WithdrawalService {
 
     private final WithdrawalRequestRepository withdrawalRequestRepository;
     private final UserEventRepository userEventRepository;
+    private final org.example.eventplatform.event.repository.EventRepository eventRepository;
     private final IdentityServiceClient identityServiceClient;
     private final NotificationPublisher notificationPublisher;
 
     @Transactional(readOnly = true)
     public BigDecimal availableBalance(Long tenantId, Long userId) {
-        BigDecimal totalEarned = userEventRepository.sumTotalEarnings(tenantId, userId);
-        BigDecimal reservedOrPaid = withdrawalRequestRepository.sumReservedOrPaid(userId);
-        return (totalEarned == null ? BigDecimal.ZERO : totalEarned).subtract(reservedOrPaid);
+        return wallet(tenantId, userId).available();
+    }
+
+    /** Điểm thực nhận (sau trừ quỹ đoàn) cộng hoa hồng, trừ phần đã rút hoặc đang chờ rút. */
+    @Transactional(readOnly = true)
+    public WalletSummary wallet(Long tenantId, Long userId) {
+        BigDecimal net = nz(userEventRepository.sumTotalEarnings(tenantId, userId));
+        BigDecimal gross = nz(userEventRepository.sumGrossEarnings(tenantId, userId));
+        BigDecimal fund = nz(userEventRepository.sumFundDeducted(tenantId, userId));
+        BigDecimal commission = nz(eventRepository.sumCommission(tenantId, userId));
+        BigDecimal withdrawn = nz(withdrawalRequestRepository.sumReservedOrPaid(userId));
+        return new WalletSummary(net.add(commission).subtract(withdrawn), gross, fund, commission, withdrawn);
+    }
+
+    private static BigDecimal nz(BigDecimal v) {
+        return v == null ? BigDecimal.ZERO : v;
     }
 
     @Transactional

@@ -91,6 +91,22 @@ public class UserService {
         return toResponse(userRepository.save(user));
     }
 
+    /** Trưởng đoàn chỉnh các thông tin dùng để gán tỉ lệ: ngày vào đoàn, số năm kinh nghiệm, % quỹ đoàn, % hoa hồng. */
+    @Transactional
+    public MemberResponse updateFinanceProfile(Long tenantId, Long userId, java.time.LocalDate joinedDate, Integer seniority,
+                                               java.math.BigDecimal teamFundPercent, java.math.BigDecimal commissionRate) {
+        User user = userRepository.findByIdAndTenantId(userId, tenantId)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy thành viên với ID: " + userId));
+        if (joinedDate != null && joinedDate.isAfter(java.time.LocalDate.now(org.example.eventplatform.shared.time.Clocks.VN))) {
+            throw new IllegalArgumentException("Ngày vào đoàn không được ở tương lai");
+        }
+        user.setJoinedDate(joinedDate);
+        user.setSeniority(seniority);
+        user.setTeamFundPercent(teamFundPercent);
+        user.setCommissionRate(commissionRate);
+        return toResponse(userRepository.save(user));
+    }
+
     @Transactional
     public MemberResponse updateBankAccount(Long tenantId, Long userId, String bankName, String accountNumber, String accountHolder) {
         User user = userRepository.findByIdAndTenantId(userId, tenantId)
@@ -111,6 +127,9 @@ public class UserService {
                 .isActive(user.getIsActive())
                 .availabilityStatus(user.getAvailabilityStatus())
                 .commissionRate(user.getCommissionRate())
+                .teamFundPercent(user.getTeamFundPercent())
+                .joinedDate(user.getJoinedDate())
+                .seniority(user.getSeniority())
                 .bankName(user.getBankName())
                 .bankAccountNumber(user.getBankAccountNumber())
                 .bankAccountHolder(user.getBankAccountHolder())
