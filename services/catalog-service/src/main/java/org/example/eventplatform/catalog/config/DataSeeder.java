@@ -1,5 +1,6 @@
 package org.example.eventplatform.catalog.config;
 
+import org.example.eventplatform.shared.time.Clocks;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.eventplatform.catalog.entity.Banner;
@@ -94,7 +95,7 @@ public class DataSeeder {
                             + "<h2>Dành cho khách thuê</h2><p>Tìm đơn vị theo khu vực, xem gói và giá, gửi yêu cầu đặt show chỉ trong vài bước.</p>")
                     .seoTitle("Stagio - Nền tảng đặt show và quản lý đoàn biểu diễn")
                     .status(PostStatus.PUBLISHED)
-                    .publishedAt(LocalDateTime.now())
+                    .publishedAt(Clocks.utcNow())
                     .build());
             repository.save(Post.builder()
                     .authorName("Stagio")
@@ -107,7 +108,7 @@ public class DataSeeder {
                             + "<h2>2. So sánh gói và giá</h2><p>Xem rõ thời lượng, số thành viên và các hạng mục kèm theo trước khi đặt.</p>"
                             + "<h2>3. Đặt sớm và chốt lịch</h2><p>Các ngày đẹp thường kín lịch, nên đặt trước ít nhất một tuần.</p>")
                     .status(PostStatus.PUBLISHED)
-                    .publishedAt(LocalDateTime.now().minusDays(1))
+                    .publishedAt(Clocks.utcNow().minusDays(1))
                     .build());
             log.info("Seeded sample posts");
         };

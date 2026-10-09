@@ -27,6 +27,10 @@ public class ChatMessage extends BaseEntity {
     @Column(name = "sender_user_id")
     private Long senderUserId;
 
+    // Có thể rỗng khi tin chỉ là một ảnh.
     @Column(nullable = false, length = 2000)
     private String content;
+
+    @Column(name = "image_url", length = 600)
+    private String imageUrl;
 }

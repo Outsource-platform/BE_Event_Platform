@@ -1,5 +1,6 @@
 package org.example.eventplatform.catalog.service;
 
+import org.example.eventplatform.shared.time.Clocks;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.example.eventplatform.catalog.client.IdentityClient;
@@ -129,7 +130,7 @@ public class PostService {
         if (post.getStatus() != PostStatus.PUBLISHED) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "POST_NOT_PUBLISHED", "Chỉ đẩy được bài đã đăng");
         }
-        LocalDateTime since = LocalDateTime.now().minusHours(PUSH_WINDOW_HOURS);
+        LocalDateTime since = Clocks.utcNow().minusHours(PUSH_WINDOW_HOURS);
         if (post.getPushedAt() != null && post.getPushedAt().isAfter(since)) {
             throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "POST_PUSH_COOLDOWN", "Bài này vừa được đẩy, hãy thử lại sau");
         }
@@ -137,14 +138,14 @@ public class PostService {
             throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "POST_PUSH_LIMIT",
                     "Đã dùng hết " + PUSH_LIMIT + " lượt đẩy tin trong " + PUSH_WINDOW_HOURS + " giờ");
         }
-        post.setPushedAt(LocalDateTime.now());
+        post.setPushedAt(Clocks.utcNow());
         postRepository.save(post);
         return pushQuota(tenantId);
     }
 
     @Transactional(readOnly = true)
     public PushQuota pushQuota(Long tenantId) {
-        LocalDateTime since = LocalDateTime.now().minusHours(PUSH_WINDOW_HOURS);
+        LocalDateTime since = Clocks.utcNow().minusHours(PUSH_WINDOW_HOURS);
         int used = (int) postRepository.countByTenantIdAndPushedAtAfter(tenantId, since);
         LocalDateTime earliest = used == 0 ? null : postRepository.findEarliestPushSince(tenantId, since);
         return new PushQuota(PUSH_LIMIT, used, earliest == null ? null : earliest.plusHours(PUSH_WINDOW_HOURS));
@@ -178,7 +179,7 @@ public class PostService {
     private void changeStatus(Post post, PostStatus status) {
         post.setStatus(status);
         if (status == PostStatus.PUBLISHED && post.getPublishedAt() == null) {
-            post.setPublishedAt(LocalDateTime.now());
+            post.setPublishedAt(Clocks.utcNow());
         }
     }
 

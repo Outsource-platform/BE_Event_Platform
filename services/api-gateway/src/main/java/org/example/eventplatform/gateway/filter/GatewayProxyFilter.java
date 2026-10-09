@@ -73,7 +73,9 @@ public class GatewayProxyFilter implements WebFilter, Ordered {
             new Limit(HttpMethod.POST, "/api/auth/login", 20, 60_000),
             new Limit(HttpMethod.POST, "/api/auth/customer/register", 10, 3_600_000),
             new Limit(HttpMethod.POST, "/api/tenants/register", 5, 3_600_000),
-            new Limit(HttpMethod.POST, "/api/auth/delete-account", 10, 3_600_000)
+            new Limit(HttpMethod.POST, "/api/auth/delete-account", 10, 3_600_000),
+            // Khách tải ảnh vào chat: đủ dùng bình thường, đủ chặn kẻ đổ ảnh làm đầy kho.
+            new Limit(HttpMethod.POST, "/api/files/chat-images", 60, 3_600_000)
     );
 
     public GatewayProxyFilter(JwtTokenProvider jwtTokenProvider, RouteTable routeTable, WebClient.Builder webClientBuilder) {

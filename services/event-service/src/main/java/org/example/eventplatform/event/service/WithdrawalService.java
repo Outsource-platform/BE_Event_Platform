@@ -1,5 +1,6 @@
 package org.example.eventplatform.event.service;
 
+import org.example.eventplatform.shared.time.Clocks;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.example.eventplatform.event.client.IdentityServiceClient;
@@ -84,7 +85,7 @@ public class WithdrawalService {
     public WithdrawalResponse approve(Long tenantId, Long id) {
         WithdrawalRequest w = getOwnedPendingOrThrow(tenantId, id);
         w.setStatus(WithdrawalStatus.APPROVED);
-        w.setProcessedAt(LocalDateTime.now());
+        w.setProcessedAt(Clocks.utcNow());
         withdrawalRequestRepository.save(w);
 
         notificationPublisher.publish(
@@ -102,7 +103,7 @@ public class WithdrawalService {
     public WithdrawalResponse reject(Long tenantId, Long id) {
         WithdrawalRequest w = getOwnedPendingOrThrow(tenantId, id);
         w.setStatus(WithdrawalStatus.REJECTED);
-        w.setProcessedAt(LocalDateTime.now());
+        w.setProcessedAt(Clocks.utcNow());
         withdrawalRequestRepository.save(w);
 
         notificationPublisher.publish(

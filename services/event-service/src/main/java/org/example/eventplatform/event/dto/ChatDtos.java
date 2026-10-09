@@ -1,6 +1,5 @@
 package org.example.eventplatform.event.dto;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
@@ -23,9 +22,12 @@ public final class ChatDtos {
     @Getter
     @Setter
     public static class SendRequest {
-        @NotBlank(message = "Nhập nội dung tin nhắn")
+        // Một tin phải có chữ hoặc ảnh (kiểm tra ở ChatService).
         @Size(max = 2000, message = "Tin nhắn tối đa 2000 ký tự")
         private String content;
+
+        @Size(max = 600, message = "Đường dẫn ảnh quá dài")
+        private String imageUrl;
     }
 
     /** Một dòng trong danh sách hội thoại; [unread] là số tin chưa đọc của bên đang xem. */
@@ -33,7 +35,7 @@ public final class ChatDtos {
                                String eventTitle, String lastMessage, LocalDateTime lastMessageAt, int unread) {
     }
 
-    public record Message(Long id, String sender, String content, LocalDateTime sentAt) {
+    public record Message(Long id, String sender, String content, String imageUrl, LocalDateTime sentAt) {
     }
 
     public record Thread(Conversation conversation, List<Message> messages) {

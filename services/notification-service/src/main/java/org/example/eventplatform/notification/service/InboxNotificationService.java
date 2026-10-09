@@ -1,5 +1,6 @@
 package org.example.eventplatform.notification.service;
 
+import org.example.eventplatform.shared.time.Clocks;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.eventplatform.notification.client.IdentityServiceClient;
@@ -65,12 +66,12 @@ public class InboxNotificationService {
 
     @Transactional
     public void markRead(Long userId, Long notificationId) {
-        userNotificationRepository.markRead(notificationId, userId, LocalDateTime.now());
+        userNotificationRepository.markRead(notificationId, userId, Clocks.utcNow());
     }
 
     @Transactional
     public void markAllRead(Long userId) {
-        userNotificationRepository.markAllRead(userId, LocalDateTime.now());
+        userNotificationRepository.markAllRead(userId, Clocks.utcNow());
     }
 
     /** Thông báo cũ lưu "User #id". Đổi lúc đọc để hộp thư trưởng đoàn hiện họ tên mà không sửa dữ liệu đã ghi. */

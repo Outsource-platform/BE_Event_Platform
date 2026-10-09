@@ -1,5 +1,6 @@
 package org.example.eventplatform.event.service;
 
+import org.example.eventplatform.shared.time.Clocks;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.eventplatform.event.client.CustomerServiceClient;
@@ -203,7 +204,7 @@ public class DemoDataSeeder {
         var existing = eventRepository.findByTenantId(tenantId, PageRequest.of(0, 200)).getContent();
         var packages = packageRepository.findByTenantId(tenantId);
         var customer = customerClient.findOrCreate(tenantId, "09000002" + String.format("%02d", index), null, "Khách lẻ", null);
-        LocalDate today = LocalDate.now();
+        LocalDate today = Clocks.vnToday();
         for (Gallery g : GALLERIES) {
             String name = g.names().get(index % g.names().size());
             var same = existing.stream().filter(e -> name.equals(e.getName())).findFirst();
@@ -301,7 +302,7 @@ public class DemoDataSeeder {
     }
 
     private int seedEvents(Long tenantId, String domain) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = Clocks.vnToday();
         int count = 0;
         for (Demo d : EVENTS) {
             var customer = customerClient.findOrCreate(tenantId, d.phone(), null, d.customer(), null);

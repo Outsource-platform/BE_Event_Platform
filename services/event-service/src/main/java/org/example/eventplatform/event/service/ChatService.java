@@ -1,5 +1,6 @@
 package org.example.eventplatform.event.service;
 
+import org.example.eventplatform.shared.time.Clocks;
 import lombok.RequiredArgsConstructor;
 import org.example.eventplatform.event.client.IdentityServiceClient;
 import org.example.eventplatform.event.dto.ChatDtos;
@@ -34,6 +35,10 @@ public class ChatService {
     private final IdentityServiceClient identityServiceClient;
     private final NotificationPublisher notificationPublisher;
 
+    // Chỉ nhận ảnh nằm trên kho của hệ thống, tránh người dùng chèn đường dẫn ngoài (theo dõi, nội dung lạ) vào cuộc trò chuyện.
+    @org.springframework.beans.factory.annotation.Value("${chat.image-prefixes:https://muong14.xyz/}")
+    private List<String> imagePrefixes;
+
     // ===== Khách =====
 
     /** Mở (hoặc tạo) hội thoại với một đoàn, gắn với show nếu khách đang xem một show. */
@@ -62,7 +67,7 @@ public class ChatService {
                     .customerName(user != null && user.fullName() != null ? user.fullName() : "Khách")
                     .tenantName(tenant.name())
                     .eventTitle(titleOf(eventRepository.findById(eventId == null ? -1L : eventId).orElse(null)))
-                    .lastMessageAt(LocalDateTime.now())
+                    .lastMessageAt(Clocks.utcNow())
                     .build());
         });
         return toConversation(conversation, false);
@@ -101,14 +106,22 @@ public class ChatService {
     }
 
     @Transactional
-    public ChatDtos.Message send(Long conversationId, Long callerId, boolean asTenant, Long senderUserId, String content) {
+    public ChatDtos.Message send(Long conversationId, Long callerId, boolean asTenant, Long senderUserId, String content, String imageUrl) {
         ChatConversation c = authorized(conversationId, callerId, asTenant);
-        String text = content.trim();
+        String text = content == null ? "" : content.trim();
+        String image = imageUrl == null || imageUrl.isBlank() ? null : imageUrl.trim();
+        if (text.isEmpty() && image == null) {
+            throw new IllegalArgumentException("Nhập nội dung tin nhắn hoặc chọn ảnh");
+        }
+        if (image != null && imagePrefixes.stream().noneMatch(p -> !p.isBlank() && image.startsWith(p.trim()))) {
+            throw new IllegalArgumentException("Ảnh không hợp lệ, hãy tải ảnh lên bằng ứng dụng");
+        }
         ChatMessage saved = messageRepository.save(ChatMessage.builder()
                 .conversationId(conversationId).sender(asTenant ? "TROUPE" : "CUSTOMER").senderUserId(senderUserId)
-                .content(text).build());
-        c.setLastMessageAt(LocalDateTime.now());
-        c.setLastMessagePreview(text.length() > 120 ? text.substring(0, 117) + "..." : text);
+                .content(text).imageUrl(image).build());
+        String preview = text.isEmpty() ? "[Ảnh]" : (image != null ? "[Ảnh] " + text : text);
+        c.setLastMessageAt(Clocks.utcNow());
+        c.setLastMessagePreview(preview.length() > 120 ? preview.substring(0, 117) + "..." : preview);
         if (asTenant) {
             c.setCustomerUnread(c.getCustomerUnread() + 1);
         } else {
@@ -160,7 +173,7 @@ public class ChatService {
     }
 
     private static ChatDtos.Message toMessage(ChatMessage m) {
-        return new ChatDtos.Message(m.getId(), m.getSender(), m.getContent(), m.getCreatedAt());
+        return new ChatDtos.Message(m.getId(), m.getSender(), m.getContent(), m.getImageUrl(), m.getCreatedAt());
     }
 
     private static String titleOf(Event event) {

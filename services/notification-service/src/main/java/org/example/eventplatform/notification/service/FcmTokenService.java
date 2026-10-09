@@ -1,5 +1,6 @@
 package org.example.eventplatform.notification.service;
 
+import org.example.eventplatform.shared.time.Clocks;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.eventplatform.notification.entity.FcmToken;
@@ -24,7 +25,7 @@ public class FcmTokenService {
 
     @Transactional
     public void registerToken(Long userId, String token) {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = Clocks.utcNow();
         FcmToken existing = fcmTokenRepository.findByToken(token).orElse(null);
         if (existing != null) {
             existing.setUserId(userId);
@@ -52,7 +53,7 @@ public class FcmTokenService {
     @Transactional
     public void touchToken(String token) {
         fcmTokenRepository.findByToken(token).ifPresent(stored -> {
-            stored.setLastSeenAt(LocalDateTime.now());
+            stored.setLastSeenAt(Clocks.utcNow());
             fcmTokenRepository.save(stored);
         });
     }
@@ -70,7 +71,7 @@ public class FcmTokenService {
     @Scheduled(cron = "0 30 3 * * *")
     @Transactional
     public void purgeStaleTokens() {
-        LocalDateTime cutoff = LocalDateTime.now().minusDays(tokenRetentionDays);
+        LocalDateTime cutoff = Clocks.utcNow().minusDays(tokenRetentionDays);
         int deleted = fcmTokenRepository.deleteByLastSeenAtBefore(cutoff);
         if (deleted > 0) {
             log.info("Purged {} stale FCM tokens older than {} days", deleted, tokenRetentionDays);

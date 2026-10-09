@@ -1,5 +1,6 @@
 package org.example.eventplatform.event.service;
 
+import org.example.eventplatform.shared.time.Clocks;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.example.eventplatform.event.client.CatalogServiceClient;
@@ -416,7 +417,7 @@ public class EventService {
 
         ue.setStatus(status);
         ue.setNote(note);
-        ue.setRespondedAt(LocalDateTime.now());
+        ue.setRespondedAt(Clocks.utcNow());
         userEventRepository.save(ue);
 
         String type = status == AssignStatus.REJECTED ? "MEMBER_REJECTED" : "MEMBER_ACCEPTED";
@@ -435,8 +436,9 @@ public class EventService {
         UserEvent ue = getAssignmentOrThrow(userEventId);
         assertSelfOrAdmin(ue, principal);
 
-        LocalTime now = LocalTime.now();
-        ue.setActualConcentrateAt(now);
+        // Lưu UTC; so với giờ quy định và viết vào câu chữ thì dùng giờ Việt Nam (giờ quy định là giờ tường do trưởng đoàn nhập).
+        ue.setActualConcentrateAt(Clocks.utcNowTime());
+        LocalTime now = Clocks.vnNowTime();
         ue.setStatus(AssignStatus.CHECKIN_CONCENTRATE);
         userEventRepository.save(ue);
 
@@ -487,7 +489,7 @@ public class EventService {
             }
         }
 
-        ue.setCheckinAt(LocalTime.now());
+        ue.setCheckinAt(Clocks.utcNowTime());
         ue.setCheckinLocation(location);
         ue.setCheckinLat(lat);
         ue.setCheckinLng(lng);
@@ -518,7 +520,7 @@ public class EventService {
             throw new IllegalStateException("Bạn chưa check-in điểm diễn");
         }
 
-        ue.setCheckoutAt(LocalTime.now());
+        ue.setCheckoutAt(Clocks.utcNowTime());
         ue.setStatus(AssignStatus.COMPLETED);
         userEventRepository.save(ue);
 

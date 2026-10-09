@@ -1,5 +1,6 @@
 package org.example.eventplatform.catalog.config;
 
+import org.example.eventplatform.shared.time.Clocks;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.eventplatform.catalog.entity.Banner;
@@ -144,7 +145,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                 postRepository.save(old);
             }
         }
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = Clocks.utcNow();
         List<Object[]> items = List.of(
                 new Object[]{FIRST_POST_SLUG, "Ý nghĩa múa lân sư rồng trong ngày Tết",
                         "Vì sao tiếng trống lân lại không thể thiếu mỗi dịp xuân về? Cùng tìm hiểu ý nghĩa tâm linh và nét đẹp văn hoá của điệu múa truyền thống.",

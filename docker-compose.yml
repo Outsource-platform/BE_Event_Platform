@@ -105,6 +105,8 @@ services:
     environment:
       <<: *app-env
       DB_NAME: event_db
+      # Tiền tố URL được phép cho ảnh trong tin nhắn (địa chỉ công khai của kho ảnh).
+      CHAT_IMAGE_PREFIXES: ${CHAT_IMAGE_PREFIXES:-https://muong14.xyz/}
     depends_on:
       rabbitmq:
         condition: service_healthy

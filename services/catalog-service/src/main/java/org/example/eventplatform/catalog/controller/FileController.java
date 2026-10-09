@@ -29,6 +29,13 @@ public class FileController {
         return ResponseEntity.ok(Map.of("url", storage.storeImage(image)));
     }
 
+    /** Ảnh gửi trong tin nhắn: khách và trưởng đoàn đều dùng được (khác /images chỉ cho quản trị). Cũng đổi sang WebP. */
+    @PostMapping("/chat-images")
+    @PreAuthorize("hasAnyRole('CUSTOMER','ADMIN')")
+    public ResponseEntity<Map<String, String>> uploadChatImage(@RequestParam("image") MultipartFile image) {
+        return ResponseEntity.ok(Map.of("url", storage.storeImage(image)));
+    }
+
     /** Tải video giới thiệu show lên. Chỉ quản trị đơn vị và Super Admin. */
     @PostMapping("/videos")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")

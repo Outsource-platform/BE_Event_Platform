@@ -10,6 +10,8 @@ import org.example.eventplatform.event.entity.AssignStatus;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import org.example.eventplatform.shared.time.UtcTimeSerializer;
+import tools.jackson.databind.annotation.JsonSerialize;
 import java.util.List;
 
 @Getter
@@ -34,8 +36,11 @@ public class AssignmentResponse {
     private String statusDisplayName;
     private String note;
 
+    @JsonSerialize(using = UtcTimeSerializer.class)
     private LocalTime actualConcentrateAt;
+    @JsonSerialize(using = UtcTimeSerializer.class)
     private LocalTime checkinAt;
+    @JsonSerialize(using = UtcTimeSerializer.class)
     private LocalTime checkoutAt;
     private Double checkinLat;
     private Double checkinLng;

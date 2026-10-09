@@ -43,7 +43,7 @@ public class ChatController {
     @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<ChatDtos.Message> customerSend(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable Long id,
                                                          @Valid @RequestBody ChatDtos.SendRequest request) {
-        return ResponseEntity.ok(chatService.send(id, principal.userId(), false, principal.userId(), request.getContent()));
+        return ResponseEntity.ok(chatService.send(id, principal.userId(), false, principal.userId(), request.getContent(), request.getImageUrl()));
     }
 
     // ===== Trưởng đoàn =====
@@ -65,6 +65,6 @@ public class ChatController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ChatDtos.Message> tenantSend(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable Long id,
                                                        @Valid @RequestBody ChatDtos.SendRequest request) {
-        return ResponseEntity.ok(chatService.send(id, principal.tenantId(), true, principal.userId(), request.getContent()));
+        return ResponseEntity.ok(chatService.send(id, principal.tenantId(), true, principal.userId(), request.getContent(), request.getImageUrl()));
     }
 }
