@@ -6,6 +6,7 @@ import org.example.eventplatform.identity.dto.auth.UpdateBankAccountRequest;
 import org.example.eventplatform.identity.dto.user.CreateMemberRequest;
 import org.example.eventplatform.identity.dto.user.MemberResponse;
 import org.example.eventplatform.identity.dto.user.TeammateResponse;
+import org.example.eventplatform.identity.dto.user.UpdateProfileRequest;
 import org.example.eventplatform.identity.dto.user.UpdateAvailabilityRequest;
 import org.example.eventplatform.identity.dto.user.UpdateCommissionRateRequest;
 import org.example.eventplatform.identity.dto.user.UpdateFinanceProfileRequest;
@@ -78,6 +79,16 @@ public class UserController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateCommissionRateRequest request) {
         return ResponseEntity.ok(userService.updateCommissionRate(principal.tenantId(), id, request.getCommissionRate()));
+    }
+
+    /** Sửa họ tên, số điện thoại, email và (tuỳ chọn) đặt lại mật khẩu của thành viên trong đoàn. */
+    @PatchMapping("/{id}/profile")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<MemberResponse> updateProfile(
+            @AuthenticationPrincipal JwtPrincipal principal,
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateProfileRequest request) {
+        return ResponseEntity.ok(userService.updateProfile(principal.tenantId(), id, request));
     }
 
     @PatchMapping("/{id}/finance")

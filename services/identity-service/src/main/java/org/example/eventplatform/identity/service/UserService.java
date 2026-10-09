@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.example.eventplatform.identity.dto.user.CreateMemberRequest;
 import org.example.eventplatform.identity.dto.user.MemberResponse;
 import org.example.eventplatform.identity.dto.user.TeammateResponse;
+import org.example.eventplatform.identity.dto.user.UpdateProfileRequest;
 import org.example.eventplatform.identity.entity.Role;
 import org.example.eventplatform.identity.entity.User;
 import org.example.eventplatform.identity.entity.UserStatus;
@@ -100,6 +101,23 @@ public class UserService {
         User user = userRepository.findByIdAndTenantId(userId, tenantId)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy thành viên với ID: " + userId));
         user.setCommissionRate(commissionRate);
+        return toResponse(userRepository.save(user));
+    }
+
+    @Transactional
+    public MemberResponse updateProfile(Long tenantId, Long userId, UpdateProfileRequest request) {
+        User user = userRepository.findByIdAndTenantId(userId, tenantId)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy thành viên với ID: " + userId));
+        String email = request.getEmail() == null || request.getEmail().isBlank() ? null : request.getEmail().trim();
+        if (email != null && !email.equalsIgnoreCase(user.getEmail()) && userRepository.existsByEmailAndTenantId(email, tenantId)) {
+            throw new IllegalStateException("Email này đã được dùng trong đoàn của bạn");
+        }
+        user.setFullName(request.getFullName().trim());
+        user.setPhone(request.getPhone() == null || request.getPhone().isBlank() ? null : request.getPhone().trim());
+        user.setEmail(email);
+        if (request.getNewPassword() != null && !request.getNewPassword().isBlank()) {
+            user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        }
         return toResponse(userRepository.save(user));
     }
 
