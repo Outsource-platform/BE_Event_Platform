@@ -36,6 +36,15 @@ public class AccountCleanupClient {
         eventClient.delete().uri("/api/internal/users/{id}/data", userId).retrieve().toBodilessEntity();
     }
 
+    /** Tình trạng còn dở của thành viên ở event-service; lỗi gọi thì ném ra để không xoá nhầm khi chưa kiểm tra được. */
+    public MemberDeleteCheck memberDeleteCheck(Long userId, Long tenantId) {
+        return eventClient.get().uri("/api/internal/members/{id}/delete-check?tenantId={t}", userId, tenantId)
+                .retrieve().body(MemberDeleteCheck.class);
+    }
+
+    public record MemberDeleteCheck(long openAssignments, long openContracts, java.math.BigDecimal balance, long pendingWithdrawals) {
+    }
+
     public void deleteNotificationData(Long userId) {
         notificationClient.delete().uri("/api/internal/users/{id}/data", userId).retrieve().toBodilessEntity();
     }

@@ -8,6 +8,7 @@ import org.example.eventplatform.identity.dto.user.TeammateResponse;
 import org.example.eventplatform.identity.dto.user.UpdateProfileRequest;
 import org.example.eventplatform.identity.entity.Role;
 import org.example.eventplatform.identity.entity.User;
+import org.example.eventplatform.identity.client.AccountCleanupClient;
 import org.example.eventplatform.identity.entity.UserStatus;
 import org.example.eventplatform.identity.repository.RoleRepository;
 import org.example.eventplatform.identity.repository.TenantRepository;
@@ -34,10 +35,11 @@ public class UserService {
     private final RoleRepository roleRepository;
     private final TenantRepository tenantRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AccountCleanupClient accountCleanupClient;
 
     @Transactional(readOnly = true)
     public Page<MemberResponse> listTenantMembers(Long tenantId, Pageable pageable) {
-        return userRepository.findByTenantId(tenantId, pageable).map(this::toResponse);
+        return userRepository.findByTenantIdAndStatusNot(tenantId, UserStatus.DELETED, pageable).map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
@@ -102,6 +104,54 @@ public class UserService {
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy thành viên với ID: " + userId));
         user.setCommissionRate(commissionRate);
         return toResponse(userRepository.save(user));
+    }
+
+    /**
+     * Trưởng đoàn xoá thành viên khỏi đoàn (xoá mềm): không đăng nhập được nữa, mất khỏi danh sách; họ tên giữ lại để lịch sử show
+     * còn đọc được, còn liên hệ và ngân hàng bị xoá. Chỉ xoá được khi không còn suất diễn dở, điểm chưa rút hay yêu cầu rút đang chờ.
+     */
+    @Transactional
+    public void deleteMember(Long tenantId, Long actingUserId, Long userId) {
+        if (userId.equals(actingUserId)) {
+            throw new IllegalArgumentException("Bạn không thể tự xoá tài khoản đang đăng nhập");
+        }
+        User user = userRepository.findByIdAndTenantId(userId, tenantId)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy thành viên với ID: " + userId));
+        if (user.getStatus() == UserStatus.DELETED) {
+            throw new EntityNotFoundException("Không tìm thấy thành viên với ID: " + userId);
+        }
+        String role = user.getRoles() != null ? user.getRoles().getName() : "";
+        if ("ADMIN".equals(role)) {
+            throw new IllegalArgumentException("Không xoá trưởng đoàn ở đây; hãy liên hệ hỗ trợ để bàn giao đơn vị");
+        }
+        AccountCleanupClient.MemberDeleteCheck check;
+        try {
+            check = accountCleanupClient.memberDeleteCheck(userId, tenantId);
+        } catch (Exception ex) {
+            throw new IllegalStateException("Hệ thống đang bận, vui lòng thử xoá lại sau ít phút");
+        }
+        java.util.List<String> reasons = new java.util.ArrayList<>();
+        if (check.openAssignments() > 0) reasons.add(check.openAssignments() + " suất diễn chưa xong");
+        if (check.openContracts() > 0) reasons.add(check.openContracts() + " show đang thầu chưa hoàn thành");
+        if (check.pendingWithdrawals() > 0) reasons.add("yêu cầu rút điểm đang chờ duyệt");
+        if (check.balance() != null && check.balance().signum() > 0) reasons.add("còn " + check.balance().stripTrailingZeros().toPlainString() + " điểm chưa rút");
+        if (!reasons.isEmpty()) {
+            throw new IllegalStateException("Chưa xoá được: " + String.join(", ", reasons));
+        }
+        try {
+            accountCleanupClient.deleteNotificationData(userId);
+        } catch (Exception ex) {
+            throw new IllegalStateException("Hệ thống đang bận, vui lòng thử xoá lại sau ít phút");
+        }
+        user.setUsername("deleted_" + user.getId());
+        user.setEmail(null);
+        user.setPhone(null);
+        BankAccounts.clear(user);
+        user.setPassword(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
+        user.setVerificationToken(null);
+        user.setIsActive(false);
+        user.setStatus(UserStatus.DELETED);
+        userRepository.save(user);
     }
 
     @Transactional

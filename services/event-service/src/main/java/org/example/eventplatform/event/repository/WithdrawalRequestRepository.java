@@ -24,5 +24,7 @@ public interface WithdrawalRequestRepository extends JpaRepository<WithdrawalReq
             "WHERE w.userId = :userId AND w.status IN ('PENDING', 'APPROVED')")
     BigDecimal sumReservedOrPaid(@Param("userId") Long userId);
 
+    long countByUserIdAndStatus(Long userId, WithdrawalStatus status);
+
     List<WithdrawalRequest> findByTenantIdAndStatusOrderByCreatedAtDesc(Long tenantId, WithdrawalStatus status);
 }

@@ -32,6 +32,11 @@ public interface UserEventRepository extends JpaRepository<UserEvent, Long> {
     long countPendingShows(@Param("tenantId") Long tenantId, @Param("userId") Long userId);
 
     /** Điểm thực nhận từ các show đã hoàn thành: số đã chốt (sau khi trừ quỹ), show cũ chưa chốt thì lấy salary. */
+    /** Suất diễn còn dở (chưa hoàn thành, show chưa kết thúc) của một thành viên. */
+    @Query("SELECT COUNT(ue) FROM UserEvent ue WHERE ue.userId = :userId AND ue.status <> 'REJECTED' AND ue.status <> 'COMPLETED' " +
+            "AND ue.event.status NOT IN (org.example.eventplatform.event.entity.EventStatus.COMPLETED, org.example.eventplatform.event.entity.EventStatus.CANCELLED)")
+    long countOpenAssignments(@Param("userId") Long userId);
+
     @Query("SELECT SUM(COALESCE(ue.netAmount, ue.salary)) FROM UserEvent ue WHERE ue.event.tenantId = :tenantId " +
             "AND ue.userId = :userId AND ue.status = 'COMPLETED'")
     BigDecimal sumTotalEarnings(@Param("tenantId") Long tenantId, @Param("userId") Long userId);

@@ -81,6 +81,14 @@ public class UserController {
         return ResponseEntity.ok(userService.updateCommissionRate(principal.tenantId(), id, request.getCommissionRate()));
     }
 
+    /** Xoá thành viên khỏi đoàn (xoá mềm). Bị từ chối nếu còn suất diễn dở, điểm chưa rút hoặc yêu cầu rút đang chờ. */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteMember(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable Long id) {
+        userService.deleteMember(principal.tenantId(), principal.userId(), id);
+        return ResponseEntity.noContent().build();
+    }
+
     /** Sửa họ tên, số điện thoại, email và (tuỳ chọn) đặt lại mật khẩu của thành viên trong đoàn. */
     @PatchMapping("/{id}/profile")
     @PreAuthorize("hasRole('ADMIN')")

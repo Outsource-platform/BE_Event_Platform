@@ -23,6 +23,11 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
     long countByStatus(EventStatus status);
 
+    /** Show chưa kết thúc mà người này đang là người thầu (còn hoa hồng chưa chốt). */
+    @Query("SELECT COUNT(e) FROM Event e WHERE e.tenantId = :tenantId AND e.contractUserId = :userId " +
+            "AND e.status NOT IN (org.example.eventplatform.event.entity.EventStatus.COMPLETED, org.example.eventplatform.event.entity.EventStatus.CANCELLED)")
+    long countOpenContracts(@Param("tenantId") Long tenantId, @Param("userId") Long userId);
+
     @org.springframework.data.jpa.repository.Modifying
     @Query("UPDATE Event e SET e.contractUserId = e.createdByUserId, e.source = 'TROUPE' WHERE e.contractUserId IS NULL " +
             "AND e.creatorCommissionAmount IS NOT NULL AND e.createdByUserId IS NOT NULL")

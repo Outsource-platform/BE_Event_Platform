@@ -40,6 +40,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Page<User> findByTenantId(Long tenantId, Pageable pageable);
 
+    Page<User> findByTenantIdAndStatusNot(Long tenantId, org.example.eventplatform.identity.entity.UserStatus status, Pageable pageable);
+
     Optional<User> findByIdAndTenantId(Long id, Long tenantId);
 
     Optional<User> findByTenantIdAndEmail(Long tenantId, String email);
