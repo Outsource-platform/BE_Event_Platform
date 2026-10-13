@@ -93,6 +93,7 @@ services:
       S3_FPT_REGION: ${S3_FPT_REGION:-han02}
       S3_FPT_BUCKET_NAME: ${S3_FPT_BUCKET_NAME:-}
       S3_FPT_PUBLIC_ENDPOINT: ${S3_FPT_PUBLIC_ENDPOINT:-}
+      S3_FPT_FOLDER: ${S3_FPT_FOLDER:-}
     # Ảnh, video chưa cấu hình S3 thì lưu local: gắn volume để build lại container không mất file.
     volumes:
       - catalog_uploads:/data/uploads

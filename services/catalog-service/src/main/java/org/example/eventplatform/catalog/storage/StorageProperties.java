@@ -21,6 +21,9 @@ public class StorageProperties {
     private String bucketName;
     @Value("${fpt-s3.public-endpoint:}")
     private String publicEndpoint;
+    /** Thư mục con của dự án bên trong images/ và videos/ khi dùng chung bucket với dự án khác (vd. "stagio"). */
+    @Value("${fpt-s3.folder:}")
+    private String folder;
     @Value("${fpt-s3.limit-size-mb:10}")
     private int limitSizeMb;
     @Value("${upload.video-limit-mb:100}")

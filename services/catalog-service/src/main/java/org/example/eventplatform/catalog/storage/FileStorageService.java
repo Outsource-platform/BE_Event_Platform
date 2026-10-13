@@ -80,7 +80,7 @@ public class FileStorageService {
             }
             String name = UUID.randomUUID() + "." + storedExt;
             if (props.isS3Configured()) {
-                String key = "images/" + name;
+                String key = s3Key("images", name);
                 s3Client().putObject(
                         PutObjectRequest.builder().bucket(props.getBucketName()).key(key).contentType(storedType).build(),
                         RequestBody.fromFile(stored));
@@ -142,7 +142,7 @@ public class FileStorageService {
 
     private String publishVideo(Path source, String name, String contentType) throws IOException {
         if (props.isS3Configured()) {
-            String key = "videos/" + name;
+            String key = s3Key("videos", name);
             s3Client().putObject(
                     PutObjectRequest.builder().bucket(props.getBucketName()).key(key).contentType(contentType).build(),
                     RequestBody.fromFile(source));
@@ -168,7 +168,7 @@ public class FileStorageService {
             }
             if (props.isS3Configured()) {
                 s3Client().putObject(
-                        PutObjectRequest.builder().bucket(props.getBucketName()).key("videos/" + name).contentType("video/mp4").build(),
+                        PutObjectRequest.builder().bucket(props.getBucketName()).key(s3Key("videos", name)).contentType("video/mp4").build(),
                         RequestBody.fromFile(out));
             } else {
                 Path dir = Paths.get(props.getLocalDir(), "videos");
@@ -235,8 +235,17 @@ public class FileStorageService {
         return s3;
     }
 
+    /** images/stagio/abc.webp khi có thư mục dự án, images/abc.webp khi không; nằm trong images/ và videos/ để hưởng chính sách đọc công khai sẵn có của bucket. */
+    private String s3Key(String type, String name) {
+        String folder = props.getFolder().replaceAll("^/+|/+$", "");
+        return type + "/" + (folder.isEmpty() ? "" : folder + "/") + name;
+    }
+
     private String publicUrl(String key) {
-        String base = props.getPublicEndpoint().isBlank() ? props.getEndpoint() : props.getPublicEndpoint();
+        // Path-style: không đặt endpoint công khai riêng thì URL phải có tên bucket, nếu không link ảnh trả 404.
+        String base = props.getPublicEndpoint().isBlank()
+                ? props.getEndpoint().replaceAll("/$", "") + "/" + props.getBucketName()
+                : props.getPublicEndpoint();
         return base.replaceAll("/$", "") + "/" + key;
     }
 
