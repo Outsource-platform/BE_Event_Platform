@@ -32,9 +32,11 @@
 ## 5. Server và triển khai (rất quan trọng)
 
 - Server dev `rocky@124.197.20.141` (khoá `/Users/macos/Desktop/Rencity/SSH Key.pem`) **dùng chung với project của người khác** (recity_web, back_end_gg, nginx-app-1, redis/rabbitmq riêng). **Chỉ được thao tác trong `~/BE_Event_Platform`.**
+- **Hai server, đừng nhầm.** Server **dev** ở trên (muong14.xyz) chạy nhánh backend **`dev`**. Server **production** `rocky@85.155.18.250` (VPS FPT riêng của Stagio, khoá `/Users/macos/Downloads/SSH Key (1).pem`, dự án ở `/var/www/BE_Event_Platform` thuộc root nên `sudo docker`, `sudo git -c safe.directory=...`) chạy nhánh **`master`**. Deploy production luôn hỏi anh Nghĩa trước.
+- Khác biệt dev/production (DB, S3, `JPA_DDL_AUTO`, Firebase...) nằm trong `.env` của từng server; nhánh `dev` chỉ chứa thêm phần code/cấu hình riêng cho dev nếu thật sự cần. Làm tính năng trên `dev`, thử trên server dev, rồi merge `dev` → `master` để lên production.
 - Luôn `cd ~/BE_Event_Platform` rồi mới chạy `docker compose`, và chỉ định đích danh service: `docker compose up -d --build <tên-service>`.
 - **Cấm:** `docker compose down -v`, `docker system prune`, `docker stop $(docker ps -q)`, mọi lệnh docker toàn cục, sửa nginx hay project khác.
-- Quy trình deploy một service: sửa code → `mvn -q -DskipTests package` ở gốc và **kiểm tra mã thoát** → commit + push `master` (khi anh Nghĩa cho phép) → trên server `git pull` → `mvn -q -pl services/<tên> -am -DskipTests package` → `docker compose up -d --build <tên>` → đợi log "Started" rồi kiểm tra bằng `curl`.
+- Quy trình deploy một service: sửa code → `mvn -q -DskipTests package` ở gốc và **kiểm tra mã thoát** → commit + push `dev` (hoặc `master` khi lên production, khi anh Nghĩa cho phép) → trên server `git pull` → `mvn -q -pl services/<tên> -am -DskipTests package` → `docker compose up -d --build <tên>` → đợi log "Started" rồi kiểm tra bằng `curl`.
 - Server chỉ còn ~750MB RAM trống: không chạy tác vụ nặng liên tục. Kiểm tra `free -m` trước khi làm việc tốn bộ nhớ.
 - Một file `.env` duy nhất ở gốc `~/BE_Event_Platform`. Compose không dùng `env_file`; biến phải được khai trong `docker-compose.yml`.
 - Dữ liệu demo chỉ dành cho server dev, bật bằng `DEMO_SEED_ENABLED`. **Không bật trên production** trừ khi có chủ đích.
