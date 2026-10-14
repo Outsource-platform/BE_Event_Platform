@@ -9,6 +9,7 @@ x-app-env: &app-env
   DB_PORT: ${DB_PORT:-3306}
   DB_USERNAME: ${DB_USERNAME}
   DB_PASSWORD: ${DB_PASSWORD}
+  JPA_DDL_AUTO: ${JPA_DDL_AUTO:-update}
   REDIS_URL: redis://redis:6379
   RABBITMQ_HOST: rabbitmq
   RABBITMQ_PORT: "5672"
