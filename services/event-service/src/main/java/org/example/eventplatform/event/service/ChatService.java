@@ -1,5 +1,7 @@
 package org.example.eventplatform.event.service;
 
+import org.springframework.http.HttpStatus;
+import org.example.eventplatform.shared.exception.ApiException;
 import org.example.eventplatform.shared.time.Clocks;
 import lombok.RequiredArgsConstructor;
 import org.example.eventplatform.event.client.IdentityServiceClient;
@@ -132,6 +134,9 @@ public class ChatService {
     public ChatDtos.Message send(Long conversationId, Caller caller, String content, String imageUrl) {
         ChatConversation c = authorized(conversationId, caller);
         boolean asTenant = isTroupeSide(c, caller.userId());
+        if (c.isCustomerBlocked() || c.isTroupeBlocked()) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "CHAT_BLOCKED", "Cuộc trò chuyện đã bị chặn, không gửi được tin nhắn");
+        }
         String text = content == null ? "" : content.trim();
         String image = imageUrl == null || imageUrl.isBlank() ? null : imageUrl.trim();
         if (text.isEmpty() && image == null) {
@@ -166,6 +171,18 @@ public class ChatService {
                     c.getLastMessagePreview(), data);
         }
         return toMessage(saved);
+    }
+
+    /** Chặn (hoặc bỏ chặn) phía bên kia của cuộc trò chuyện: khi đã chặn, không bên nào gửi được tin và không có thông báo. */
+    @Transactional
+    public ChatDtos.Conversation setBlocked(Long conversationId, Caller caller, boolean blocked) {
+        ChatConversation c = authorized(conversationId, caller);
+        if (isTroupeSide(c, caller.userId())) {
+            c.setTroupeBlocked(blocked);
+        } else {
+            c.setCustomerBlocked(blocked);
+        }
+        return toConversation(conversationRepository.save(c), caller.userId());
     }
 
     /** Khách xoá tài khoản: xoá các cuộc trò chuyện và tin nhắn của khách đó (tin nhắn có thể chứa thông tin cá nhân). */
@@ -208,7 +225,8 @@ public class ChatService {
         boolean asTenant = isTroupeSide(c, viewerId);
         return new ChatDtos.Conversation(c.getId(), c.getTenantId(), c.getTenantName(), c.getCustomerName(), c.getEventId(),
                 c.getEventTitle(), c.getLastMessagePreview(), c.getLastMessageAt(), unreadFor(c, viewerId),
-                asTenant ? c.getCustomerName() : troupeLabel(c));
+                asTenant ? c.getCustomerName() : troupeLabel(c), c.isCustomerBlocked() || c.isTroupeBlocked(),
+                asTenant ? c.isTroupeBlocked() : c.isCustomerBlocked());
     }
 
     private static ChatDtos.Message toMessage(ChatMessage m) {

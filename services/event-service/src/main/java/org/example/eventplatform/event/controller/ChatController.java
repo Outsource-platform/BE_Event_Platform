@@ -7,6 +7,7 @@ import org.example.eventplatform.event.service.ChatService;
 import org.example.eventplatform.shared.security.JwtPrincipal;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -42,6 +43,16 @@ public class ChatController {
     public ResponseEntity<ChatDtos.Thread> thread(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable Long id,
                                                   @RequestParam(required = false) Long after) {
         return ResponseEntity.ok(chatService.thread(id, caller(principal), after));
+    }
+
+    @PostMapping("/conversations/{id}/block")
+    public ResponseEntity<ChatDtos.Conversation> block(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable Long id) {
+        return ResponseEntity.ok(chatService.setBlocked(id, caller(principal), true));
+    }
+
+    @DeleteMapping("/conversations/{id}/block")
+    public ResponseEntity<ChatDtos.Conversation> unblock(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable Long id) {
+        return ResponseEntity.ok(chatService.setBlocked(id, caller(principal), false));
     }
 
     @PostMapping("/conversations/{id}/messages")

@@ -56,4 +56,14 @@ public class ChatConversation extends BaseEntity {
 
     @Builder.Default
     private int customerUnread = 0;
+
+    /** Phía mở cuộc trò chuyện (khách/thành viên) đã chặn phía đoàn. */
+    @Builder.Default
+    @Column(name = "customer_blocked", nullable = false)
+    private boolean customerBlocked = false;
+
+    /** Phía đoàn đã chặn người mở cuộc trò chuyện. */
+    @Builder.Default
+    @Column(name = "troupe_blocked", nullable = false)
+    private boolean troupeBlocked = false;
 }

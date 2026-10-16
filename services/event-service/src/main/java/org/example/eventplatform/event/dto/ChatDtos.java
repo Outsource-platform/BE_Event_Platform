@@ -33,7 +33,7 @@ public final class ChatDtos {
     /** Một dòng trong danh sách hội thoại; [unread] là số tin chưa đọc của bên đang xem. */
     public record Conversation(Long id, Long tenantId, String tenantName, String customerName, Long eventId,
                                String eventTitle, String lastMessage, LocalDateTime lastMessageAt, int unread,
-                               String counterpartName) {
+                               String counterpartName, boolean blocked, boolean blockedByMe) {
     }
 
     public record Message(Long id, String sender, Long senderUserId, String content, String imageUrl, LocalDateTime sentAt) {
