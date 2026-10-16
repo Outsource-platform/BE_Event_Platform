@@ -95,6 +95,8 @@ services:
       S3_FPT_BUCKET_NAME: ${S3_FPT_BUCKET_NAME:-}
       S3_FPT_PUBLIC_ENDPOINT: ${S3_FPT_PUBLIC_ENDPOINT:-}
       S3_FPT_FOLDER: ${S3_FPT_FOLDER:-}
+      # Địa chỉ công khai của server để dựng URL ảnh/video lưu local (gồm ảnh demo); production phải đặt.
+      UPLOAD_PUBLIC_BASE_URL: ${UPLOAD_PUBLIC_BASE_URL:-https://muong14.xyz}
     # Ảnh, video chưa cấu hình S3 thì lưu local: gắn volume để build lại container không mất file.
     volumes:
       - catalog_uploads:/data/uploads
@@ -109,6 +111,7 @@ services:
       DB_NAME: event_db
       # Tiền tố URL được phép cho ảnh trong tin nhắn (địa chỉ công khai của kho ảnh).
       CHAT_IMAGE_PREFIXES: ${CHAT_IMAGE_PREFIXES:-https://muong14.xyz/}
+      DEMO_MEDIA_BASE_URL: ${DEMO_MEDIA_BASE_URL:-https://muong14.xyz}
     depends_on:
       rabbitmq:
         condition: service_healthy
