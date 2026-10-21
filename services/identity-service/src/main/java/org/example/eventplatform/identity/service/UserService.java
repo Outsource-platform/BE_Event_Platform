@@ -32,6 +32,7 @@ public class UserService {
     private static final String DEFAULT_MEMBER_ROLE = "TN_MEMBER";
 
     private final UserRepository userRepository;
+    private final PhoneAccounts phoneAccounts;
     private final RoleRepository roleRepository;
     private final TenantRepository tenantRepository;
     private final PasswordEncoder passwordEncoder;
@@ -66,6 +67,8 @@ public class UserService {
             throw new IllegalStateException("Username đã tồn tại trong đoàn của bạn");
         }
 
+        String phone = PhoneAccounts.normalize(request.getPhone());
+        phoneAccounts.ensureFree(phone, null);
         String roleName = request.getRoleName() != null ? request.getRoleName() : DEFAULT_MEMBER_ROLE;
         if (!DEFAULT_MEMBER_ROLE.equals(roleName) && !"ADMIN".equals(roleName)) {
             throw new IllegalArgumentException("Chỉ được gán vai trò ADMIN hoặc TN_MEMBER cho thành viên trong đội");
@@ -78,7 +81,7 @@ public class UserService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .fullName(request.getFullName())
                 .email(request.getEmail())
-                .phone(request.getPhone())
+                .phone(phone)
                 .tenant(tenantRepository.getReferenceById(tenantId))
                 .roles(role)
                 .status(UserStatus.ACTIVE)
@@ -163,7 +166,9 @@ public class UserService {
             throw new IllegalStateException("Email này đã được dùng trong đoàn của bạn");
         }
         user.setFullName(request.getFullName().trim());
-        user.setPhone(request.getPhone() == null || request.getPhone().isBlank() ? null : request.getPhone().trim());
+        String phone = PhoneAccounts.normalize(request.getPhone());
+        phoneAccounts.ensureFree(phone, user.getId());
+        user.setPhone(phone);
         user.setEmail(email);
         if (request.getNewPassword() != null && !request.getNewPassword().isBlank()) {
             user.setPassword(passwordEncoder.encode(request.getNewPassword()));

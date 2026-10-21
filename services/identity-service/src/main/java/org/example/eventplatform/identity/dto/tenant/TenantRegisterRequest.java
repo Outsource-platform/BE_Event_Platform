@@ -38,4 +38,7 @@ public class TenantRegisterRequest {
     @NotBlank(message = "Mật khẩu cho admin không được để trống")
     @Size(min = 6, message = "Mật khẩu phải có ít nhất 6 ký tự")
     private String adminPassword;
+
+    /** SĐT trưởng đoàn, dùng để đăng nhập app. Không bắt buộc để app v1 (còn form đăng ký đoàn) vẫn gửi được. */
+    private String adminPhone;
 }

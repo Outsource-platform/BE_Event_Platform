@@ -28,6 +28,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
             "WHERE u.username = :username")
     List<User> findAllByUsername(@Param("username") String username);
 
+    /** Tra theo SĐT; khách (không thuộc đoàn) dùng SĐT làm username nên khớp cả cột username. */
+    @Query("SELECT u FROM User u " +
+            "LEFT JOIN FETCH u.roles r " +
+            "LEFT JOIN FETCH u.tenant " +
+            "WHERE u.phone = :phone OR (u.tenant IS NULL AND u.username = :phone)")
+    List<User> findAllByPhoneOrCustomerUsername(@Param("phone") String phone);
+
     boolean existsByUsername(String username);
 
     @Query("SELECT u FROM User u " +

@@ -25,6 +25,7 @@ import java.util.List;
 public class TenantService {
 
     private final TenantRepository tenantRepository;
+    private final PhoneAccounts phoneAccounts;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
@@ -37,6 +38,9 @@ public class TenantService {
         if (tenantRepository.existsByDomain(request.getDomain())) {
             throw new RuntimeException("Mã đoàn này đã được sử dụng");
         }
+
+        String adminPhone = PhoneAccounts.normalize(request.getAdminPhone());
+        phoneAccounts.ensureFree(adminPhone, null);
 
         Tenant tenant = new Tenant();
         tenant.setName(request.getName());
@@ -56,6 +60,7 @@ public class TenantService {
                 .username(request.getAdminUsername())
                 .password(passwordEncoder.encode(request.getAdminPassword()))
                 .email(request.getEmail())
+                .phone(adminPhone)
                 .fullName("Admin")
                 .tenant(tenant)
                 .roles(adminRole)

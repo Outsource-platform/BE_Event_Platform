@@ -12,8 +12,11 @@ import lombok.Setter;
 @NoArgsConstructor
 public class LoginRequest {
 
-    @NotBlank(message = "Username không được để trống")
+    // Cách cũ (app v1, web): mã đoàn + username. App mới gửi phone thay cho cả hai.
     private String username;
+
+    /** Đăng nhập bằng số điện thoại (app từ 1.1.0+11): không cần mã đoàn, server tự biết vai trò và đoàn. */
+    private String phone;
 
     @NotBlank(message = "Mật khẩu không được để trống")
     private String password;

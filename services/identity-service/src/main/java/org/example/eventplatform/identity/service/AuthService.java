@@ -17,6 +17,8 @@ import org.example.eventplatform.identity.repository.TenantRepository;
 import org.example.eventplatform.identity.repository.UserRepository;
 import org.example.eventplatform.shared.security.JwtPrincipal;
 import org.example.eventplatform.shared.security.JwtTokenProvider;
+import org.example.eventplatform.shared.exception.ApiException;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,9 +38,16 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
     private final AccountCleanupClient accountCleanupClient;
+    private final PhoneAccounts phoneAccounts;
 
     @Transactional(readOnly = true)
     public AuthTokenResponse login(LoginRequest request) {
+        if (request.getPhone() != null && !request.getPhone().isBlank()) {
+            return issueTokens(checkActive(loginByPhone(request.getPhone(), request.getPassword())));
+        }
+        if (request.getUsername() == null || request.getUsername().isBlank()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "LOGIN_ID_REQUIRED", "Nhập số điện thoại để đăng nhập");
+        }
         String domain = request.getTenantDomain() != null ? request.getTenantDomain().trim() : "";
         User user;
         if (!domain.isEmpty()) {
@@ -53,14 +62,42 @@ public class AuthService {
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new RuntimeException("Tài khoản hoặc mật khẩu không chính xác");
         }
-        if (Boolean.FALSE.equals(user.getIsActive())) {
-            throw new RuntimeException("Tài khoản của bạn đã bị khóa");
+        return issueTokens(checkActive(user));
+    }
+
+    /** SĐT duy nhất nên thường chỉ một tài khoản khớp; dữ liệu cũ trùng SĐT thì chọn tài khoản có mật khẩu khớp. */
+    private User loginByPhone(String rawPhone, String password) {
+        String phone;
+        try {
+            phone = PhoneAccounts.normalize(rawPhone);
+        } catch (ApiException e) {
+            throw invalidLogin();
+        }
+        List<User> matched = phoneAccounts.findActive(phone).stream()
+                .filter(u -> passwordEncoder.matches(password, u.getPassword()))
+                .toList();
+        if (matched.size() == 1) {
+            return matched.get(0);
+        }
+        if (matched.size() > 1) {
+            throw new ApiException(HttpStatus.CONFLICT, "PHONE_AMBIGUOUS",
+                    "Số điện thoại này gắn với nhiều tài khoản, vui lòng liên hệ hỗ trợ");
+        }
+        throw invalidLogin();
+    }
+
+    private static ApiException invalidLogin() {
+        return new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", "Số điện thoại hoặc mật khẩu không chính xác");
+    }
+
+    private static User checkActive(User user) {
+        if (Boolean.FALSE.equals(user.getIsActive()) || user.getStatus() == UserStatus.DELETED) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "ACCOUNT_LOCKED", "Tài khoản của bạn đã bị khóa");
         }
         if (user.getTenant() != null && !user.getTenant().isActive()) {
-            throw new RuntimeException("Đơn vị (tenant) của bạn đã bị ngừng hoạt động");
+            throw new ApiException(HttpStatus.FORBIDDEN, "TENANT_INACTIVE", "Đơn vị của bạn đã bị ngừng hoạt động");
         }
-
-        return issueTokens(user);
+        return user;
     }
 
     /**
@@ -91,12 +128,9 @@ public class AuthService {
      */
     @Transactional
     public AuthTokenResponse registerCustomer(CustomerRegisterRequest request) {
-        String phone = request.getPhone().trim();
-        boolean phoneTaken = userRepository.findAllByUsername(phone).stream()
-                .anyMatch(u -> u.getTenant() == null);
-        if (phoneTaken) {
-            throw new RuntimeException("Số điện thoại này đã được đăng ký");
-        }
+        String phone = PhoneAccounts.normalize(request.getPhone());
+        // Cả trưởng đoàn, thành viên cũng đăng nhập bằng SĐT nên phải trùng trên toàn hệ thống, không chỉ giữa các khách.
+        phoneAccounts.ensureFree(phone, null);
 
         Role customerRole = roleRepository.findByName(CUSTOMER_ROLE)
                 .orElseThrow(() -> new RuntimeException("Chưa cấu hình vai trò khách hàng"));
