@@ -18,7 +18,7 @@ import org.example.eventplatform.event.repository.CrewRoleRepository;
 import org.example.eventplatform.event.repository.EventRepository;
 import org.example.eventplatform.event.repository.ShowPackageRepository;
 import org.example.eventplatform.event.repository.UserEventRepository;
-import org.example.eventplatform.event.util.GeoUtils;
+import org.example.eventplatform.event.util.CheckinRules;
 import org.example.eventplatform.shared.security.JwtPrincipal;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -45,7 +45,6 @@ public class EventService {
 
     private static final DateTimeFormatter HOUR_MINUTE = DateTimeFormatter.ofPattern("HH:mm");
 
-    private static final int DEFAULT_CHECKIN_RADIUS_METERS = 100;
 
     private final EventRepository eventRepository;
     private final UserEventRepository userEventRepository;
@@ -503,9 +502,15 @@ public class EventService {
     }
 
     @Transactional
-    public String concentrateCheckIn(Long userEventId, JwtPrincipal principal) {
+    public String concentrateCheckIn(Long userEventId, JwtPrincipal principal, Double lat, Double lng) {
         UserEvent ue = getAssignmentOrThrow(userEventId);
         assertSelfOrAdmin(ue, principal);
+
+        Event event = ue.getEvent();
+        CheckinRules.assertConcentrateOpen(event.getEventDate(), event.getConcentrateTime(),
+                LocalDateTime.of(Clocks.vnToday(), Clocks.vnNowTime()));
+        CheckinRules.assertNear(lat, lng, event.getConcentrateLat(), event.getConcentrateLng(),
+                "NOT_NEAR_CONCENTRATE", "Bạn đang không ở gần điểm tập trung");
 
         // Lưu UTC; so với giờ quy định và viết vào câu chữ thì dùng giờ Việt Nam (giờ quy định là giờ tường do trưởng đoàn nhập).
         ue.setActualConcentrateAt(Clocks.utcNowTime());
@@ -551,14 +556,8 @@ public class EventService {
         }
 
         Event event = ue.getEvent();
-        if (lat != null && lng != null && event.getVenueLat() != null && event.getVenueLng() != null) {
-            int radius = event.getCheckinRadiusMeters() != null ? event.getCheckinRadiusMeters() : DEFAULT_CHECKIN_RADIUS_METERS;
-            double distance = GeoUtils.distanceMeters(lat, lng, event.getVenueLat(), event.getVenueLng());
-            if (distance > radius) {
-                throw new IllegalArgumentException(String.format(
-                        "Bạn đang cách sân khấu %.0fm, ngoài phạm vi cho phép (%dm)", distance, radius));
-            }
-        }
+        CheckinRules.assertNear(lat, lng, event.getVenueLat(), event.getVenueLng(),
+                "NOT_NEAR_VENUE", "Bạn đang không ở gần điểm diễn");
 
         ue.setCheckinAt(Clocks.utcNowTime());
         ue.setCheckinLocation(location);
@@ -583,13 +582,15 @@ public class EventService {
     }
 
     @Transactional
-    public String checkOut(Long userEventId, JwtPrincipal principal) {
+    public String checkOut(Long userEventId, JwtPrincipal principal, Double lat, Double lng) {
         UserEvent ue = getAssignmentOrThrow(userEventId);
         assertSelfOrAdmin(ue, principal);
 
         if (ue.getStatus() != AssignStatus.CHECKED_IN) {
             throw new IllegalStateException("Bạn chưa check-in điểm diễn");
         }
+        CheckinRules.assertNear(lat, lng, ue.getEvent().getVenueLat(), ue.getEvent().getVenueLng(),
+                "NOT_NEAR_VENUE", "Bạn đang không ở gần điểm diễn");
 
         ue.setCheckoutAt(Clocks.utcNowTime());
         ue.setStatus(AssignStatus.COMPLETED);
@@ -675,6 +676,11 @@ public class EventService {
         Event event = getEventOrThrow(eventId);
         assertOwnership(event, tenantId);
 
+        // Đổi địa điểm mà form này không gửi toạ độ: bỏ ghim cũ kẻo thành viên bị so với chỗ không còn đúng.
+        if (!Objects.equals(event.getConcentrateLocation(), request.getConcentrateLocation())) {
+            event.setConcentrateLat(null);
+            event.setConcentrateLng(null);
+        }
         event.setConcentrateTime(request.getConcentrateTime());
         event.setConcentrateLocation(request.getConcentrateLocation());
         Event saved = eventRepository.save(event);

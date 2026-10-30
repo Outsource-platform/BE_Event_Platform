@@ -141,8 +141,12 @@ public class TenantEventController {
     }
 
     @PostMapping("/assignments/{userEventId}/concentrate-check-in")
-    public ResponseEntity<String> concentrateCheckIn(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable Long userEventId) {
-        return ResponseEntity.ok(eventService.concentrateCheckIn(userEventId, principal));
+    public ResponseEntity<String> concentrateCheckIn(
+            @AuthenticationPrincipal JwtPrincipal principal,
+            @PathVariable Long userEventId,
+            @RequestParam(required = false) Double lat,
+            @RequestParam(required = false) Double lng) {
+        return ResponseEntity.ok(eventService.concentrateCheckIn(userEventId, principal, lat, lng));
     }
 
     @PostMapping("/assignments/{userEventId}/check-in")
@@ -157,8 +161,12 @@ public class TenantEventController {
     }
 
     @PostMapping("/assignments/{userEventId}/check-out")
-    public ResponseEntity<String> checkOut(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable Long userEventId) {
-        return ResponseEntity.ok(eventService.checkOut(userEventId, principal));
+    public ResponseEntity<String> checkOut(
+            @AuthenticationPrincipal JwtPrincipal principal,
+            @PathVariable Long userEventId,
+            @RequestParam(required = false) Double lat,
+            @RequestParam(required = false) Double lng) {
+        return ResponseEntity.ok(eventService.checkOut(userEventId, principal, lat, lng));
     }
 
     @PatchMapping("/assignments/{userEventId}/payroll")
