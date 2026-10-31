@@ -19,6 +19,8 @@ import org.example.eventplatform.event.repository.EventRepository;
 import org.example.eventplatform.event.repository.ShowPackageRepository;
 import org.example.eventplatform.event.repository.UserEventRepository;
 import org.example.eventplatform.event.util.CheckinRules;
+import org.springframework.http.HttpStatus;
+import org.example.eventplatform.shared.exception.ApiException;
 import org.example.eventplatform.shared.security.JwtPrincipal;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -56,6 +58,8 @@ public class EventService {
     private final IdentityServiceClient identityServiceClient;
     private final CustomerServiceClient customerServiceClient;
     private final CatalogServiceClient catalogServiceClient;
+
+    private static final DateTimeFormatter DAY_MONTH_YEAR = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     @Transactional
     public EventResponse createEvent(EventRequest request, JwtPrincipal principal) {
@@ -98,6 +102,7 @@ public class EventService {
                 .venueLat(request.getVenueLat())
                 .venueLng(request.getVenueLng())
                 .checkinRadiusMeters(request.getCheckinRadiusMeters())
+                .memberLimit(request.getMemberLimit())
                 .teamFundPercent(request.getTeamFundPercent())
                 .status(EventStatus.SCHEDULED)
                 .build();
@@ -124,6 +129,12 @@ public class EventService {
             event.setSource("TROUPE");
             Long preferred = isTenantAdmin && request.getContractUserId() != null ? request.getContractUserId() : customer.assignedToUserId();
             applyContract(event, preferred, request.getContractUserId() != null && isTenantAdmin);
+        }
+
+        // Show thêm lại sau khi đã diễn. Thành viên tạo thì vẫn chờ trưởng đoàn duyệt rồi mới chốt.
+        if (isTenantAdmin && isPast(event)) {
+            event.setStatus(EventStatus.COMPLETED);
+            payoutService.settleCommission(event);
         }
 
         Event saved = saveWithShowCode(event);
@@ -159,7 +170,98 @@ public class EventService {
             );
         }
 
+        if (isTenantAdmin) {
+            announceToMembers(saved, principal.userId());
+        }
+
         return toResponse(saved);
+    }
+
+    private boolean isPast(Event event) {
+        return event.getEventDate().isBefore(Clocks.vnToday());
+    }
+
+    private void announceToMembers(Event event, Long exceptUserId) {
+        if (event.getStatus() == EventStatus.COMPLETED || isPast(event)) {
+            return;
+        }
+        for (Long memberId : identityServiceClient.findTenantMemberIds(event.getTenantId())) {
+            if (memberId.equals(exceptUserId)) {
+                continue;
+            }
+            notificationPublisher.publish(
+                    "EVENT_OPEN_FOR_MEMBERS",
+                    memberId,
+                    null,
+                    "Có show mới, vào nhận ngay",
+                    "Show \"" + event.getName() + "\" ngày " + event.getEventDate().format(DAY_MONTH_YEAR) + " tại " + event.getLocation(),
+                    Map.of("eventId", String.valueOf(event.getId()), "openShow", "1")
+            );
+        }
+    }
+
+    private void assertHasSlot(Event event) {
+        if (event.getMemberLimit() == null) {
+            return;
+        }
+        long accepted = userEventRepository.findByEventId(event.getId()).stream().filter(EventService::holdsSlot).count();
+        if (accepted >= event.getMemberLimit()) {
+            throw new ApiException(HttpStatus.CONFLICT, "EVENT_FULL", "Show đã đủ thành viên");
+        }
+    }
+
+    private static boolean holdsSlot(UserEvent ue) {
+        return ue.getStatus() != AssignStatus.PENDING && ue.getStatus() != AssignStatus.REJECTED;
+    }
+
+    /** Show thành viên còn nhận được: chưa diễn, còn chỗ, và chưa có trong show (đã từ chối thì được đổi ý). */
+    @Transactional(readOnly = true)
+    public List<OpenShowResponse> listOpenShows(JwtPrincipal principal) {
+        return eventRepository.findOpenForMembers(principal.tenantId(), Clocks.vnToday()).stream()
+                .filter(event -> event.getAssignedMembers().stream()
+                        .noneMatch(ue -> ue.getUserId().equals(principal.userId()) && ue.getStatus() != AssignStatus.REJECTED))
+                .map(event -> new OpenShowResponse(event.getId(), event.getName(),
+                        event.getType() != null ? event.getType().name() : null,
+                        event.getEventDate(), event.getStartTime(), event.getLocation(),
+                        event.getConcentrateTime(), event.getConcentrateLocation(), event.getMemberLimit(),
+                        (int) event.getAssignedMembers().stream().filter(EventService::holdsSlot).count()))
+                .filter(show -> show.memberLimit() == null || show.acceptedCount() < show.memberLimit())
+                .toList();
+    }
+
+    @Transactional
+    public void claimShow(Long eventId, JwtPrincipal principal) {
+        // Khoá dòng show để hai người bấm cùng lúc không vượt giới hạn.
+        Event event = eventRepository.findByIdForUpdate(eventId)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy show với ID: " + eventId));
+        assertOwnership(event, principal.tenantId());
+        if ((event.getStatus() != EventStatus.SCHEDULED && event.getStatus() != EventStatus.CONFIRMED) || isPast(event)) {
+            throw new ApiException(HttpStatus.CONFLICT, "SHOW_NOT_OPEN", "Show này không còn nhận thành viên");
+        }
+        UserEvent ue = userEventRepository.findByEventIdAndUserId(eventId, principal.userId()).orElse(new UserEvent());
+        if (ue.getId() != null && holdsSlot(ue)) {
+            throw new ApiException(HttpStatus.CONFLICT, "ALREADY_JOINED", "Bạn đã nhận show này rồi");
+        }
+        assertHasSlot(event);
+
+        ue.setEvent(event);
+        ue.setUserId(principal.userId());
+        ue.setStatus(AssignStatus.ACCEPTED);
+        ue.setRespondedAt(Clocks.utcNow());
+        userEventRepository.save(ue);
+        if (event.getStatus() == EventStatus.SCHEDULED) {
+            event.setStatus(EventStatus.CONFIRMED);
+            eventRepository.save(event);
+        }
+
+        notificationPublisher.publish(
+                "MEMBER_ACCEPTED",
+                null,
+                event.getTenantId(),
+                "Thành viên đã nhận show",
+                memberLabel(principal.userId()) + " đã nhận show \"" + event.getName() + "\"",
+                Map.of("eventId", String.valueOf(eventId))
+        );
     }
 
     /**
@@ -398,8 +500,15 @@ public class EventService {
     public void acceptEvent(Long eventId, Long tenantId) {
         Event event = getEventOrThrow(eventId);
         assertOwnership(event, tenantId);
+        if (isPast(event)) {
+            event.setStatus(EventStatus.COMPLETED);
+            payoutService.settleCommission(event);
+            eventRepository.save(event);
+            return;
+        }
         event.setStatus(EventStatus.CONFIRMED);
         eventRepository.save(event);
+        announceToMembers(event, event.getCreatedByUserId());
     }
 
     @Transactional
@@ -484,6 +593,12 @@ public class EventService {
     public void respondToAssignment(Long userEventId, JwtPrincipal principal, AssignStatus status, String note) {
         UserEvent ue = getAssignmentOrThrow(userEventId);
         assertSelfOrAdmin(ue, principal);
+
+        if (status == AssignStatus.ACCEPTED && !holdsSlot(ue)) {
+            Event event = eventRepository.findByIdForUpdate(ue.getEvent().getId())
+                    .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy show"));
+            assertHasSlot(event);
+        }
 
         ue.setStatus(status);
         ue.setNote(note);
@@ -611,6 +726,13 @@ public class EventService {
         return "Đã hoàn thành show diễn!";
     }
 
+    /** Gỡ các show đã kẹt ở trạng thái đang diễn vì luật hoàn thành cũ. Chạy lại nhiều lần vẫn an toàn. */
+    @Transactional
+    public void completeFinishedShows() {
+        eventRepository.findByStatusIn(List.of(EventStatus.CONFIRMED, EventStatus.IN_PROGRESS))
+                .forEach(event -> autoCompleteEventIfFinished(event.getId()));
+    }
+
     @Transactional
     public AssignmentResponse setPayrollItems(Long userEventId, Long tenantId, List<PayrollItemRequest> items) {
         UserEvent ue = getAssignmentOrThrow(userEventId);
@@ -649,13 +771,12 @@ public class EventService {
     }
 
     private void autoCompleteEventIfFinished(Long eventId) {
-        List<UserEvent> members = userEventRepository.findByEventId(eventId);
-        boolean finished = members.stream()
-                .filter(m -> m.getStatus() != AssignStatus.REJECTED)
-                .allMatch(m -> m.getStatus() == AssignStatus.COMPLETED);
+        Event event = getEventOrThrow(eventId);
+        boolean finished = CheckinRules.showFinished(userEventRepository.findByEventId(eventId).stream()
+                .map(UserEvent::getStatus)
+                .toList());
 
-        if (finished) {
-            Event event = getEventOrThrow(eventId);
+        if (finished && event.getStatus() != EventStatus.COMPLETED) {
             event.setStatus(EventStatus.COMPLETED);
             payoutService.settleCommission(event);
             eventRepository.save(event);
@@ -831,6 +952,7 @@ public class EventService {
                 .venueLat(event.getVenueLat())
                 .venueLng(event.getVenueLng())
                 .checkinRadiusMeters(event.getCheckinRadiusMeters())
+                .memberLimit(event.getMemberLimit())
                 .teamFundPercent(event.getTeamFundPercent())
                 .teamFundAmount(computeTeamFundAmount(event.getTeamFundPercent(), event.getTotalAmount()))
                 .createdByUserId(event.getCreatedByUserId())

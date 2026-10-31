@@ -1,5 +1,8 @@
 package org.example.eventplatform.event.repository;
 
+import java.util.Optional;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
 import org.example.eventplatform.event.entity.Event;
 import org.example.eventplatform.event.entity.EventStatus;
 import org.springframework.data.domain.Page;
@@ -52,4 +55,14 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
     @Query("select e.showCode from Event e where e.tenantId = :tenantId and e.showCode like concat(:prefix, '%')")
     List<String> findShowCodesByPrefix(@Param("tenantId") Long tenantId, @Param("prefix") String prefix);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT e FROM Event e WHERE e.id = :id")
+    Optional<Event> findByIdForUpdate(@Param("id") Long id);
+
+    @Query("SELECT DISTINCT e FROM Event e LEFT JOIN FETCH e.assignedMembers WHERE e.tenantId = :tenantId "
+            + "AND e.eventDate >= :today AND e.status IN ('SCHEDULED', 'CONFIRMED') ORDER BY e.eventDate")
+    List<Event> findOpenForMembers(@Param("tenantId") Long tenantId, @Param("today") LocalDate today);
+
+    List<Event> findByStatusIn(Collection<EventStatus> statuses);
 }

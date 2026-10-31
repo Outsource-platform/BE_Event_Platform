@@ -1,6 +1,7 @@
 package org.example.eventplatform.event.dto;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -56,6 +57,9 @@ public class EventRequest {
 
     @DecimalMin(value = "0.0")
     private BigDecimal depositAmount;
+
+    @Min(value = 1, message = "Giới hạn thành viên phải từ 1 trở lên")
+    private Integer memberLimit;
 
     // Chỉ trưởng đoàn dùng: chọn người thầu khác với người phụ trách khách. Trống = theo người phụ trách khách.
     private Long contractUserId;

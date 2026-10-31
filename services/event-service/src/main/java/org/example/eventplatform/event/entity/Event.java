@@ -95,6 +95,10 @@ public class Event extends BaseEntity {
     @Column(name = "venue_lng")
     private Double venueLng;
 
+    // Số thành viên tối đa nhận show; null là không giới hạn.
+    @Column(name = "member_limit")
+    private Integer memberLimit;
+
     @Column(name = "checkin_radius_meters")
     private Integer checkinRadiusMeters;
 

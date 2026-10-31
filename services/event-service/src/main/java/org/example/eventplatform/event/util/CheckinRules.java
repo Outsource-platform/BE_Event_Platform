@@ -1,5 +1,6 @@
 package org.example.eventplatform.event.util;
 
+import org.example.eventplatform.event.entity.AssignStatus;
 import org.example.eventplatform.shared.exception.ApiException;
 import org.springframework.http.HttpStatus;
 
@@ -7,6 +8,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collection;
 
 /** Quy tắc chung khi thành viên điểm danh tập kết, check-in và check-out. */
 public final class CheckinRules {
@@ -17,6 +19,16 @@ public final class CheckinRules {
     private static final DateTimeFormatter OPENS_AT = DateTimeFormatter.ofPattern("HH:mm 'ngày' dd/MM/yyyy");
 
     private CheckinRules() {
+    }
+
+    /**
+     * Xong khi đã có người check-out và không còn ai đang ở show. Không chờ người chưa phản hồi hoặc vắng mặt,
+     * nếu không một thành viên không đến cũng làm show kẹt ở "Đang diễn" mãi.
+     */
+    public static boolean showFinished(Collection<AssignStatus> statuses) {
+        return statuses.contains(AssignStatus.COMPLETED)
+                && !statuses.contains(AssignStatus.CHECKED_IN)
+                && !statuses.contains(AssignStatus.CHECKIN_CONCENTRATE);
     }
 
     /**

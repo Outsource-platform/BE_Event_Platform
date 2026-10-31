@@ -69,6 +69,20 @@ public class IdentityServiceClient {
         }
     }
 
+    /** Lỗi thì trả rỗng: không báo được cho đoàn cũng không được làm hỏng việc tạo show. */
+    public List<Long> findTenantMemberIds(Long tenantId) {
+        try {
+            Long[] response = restClient.get()
+                    .uri("/api/internal/tenants/{tenantId}/members", tenantId)
+                    .retrieve()
+                    .body(Long[].class);
+            return response != null ? List.of(response) : List.of();
+        } catch (Exception ex) {
+            log.error("Could not fetch members of tenant {}", tenantId, ex);
+            return List.of();
+        }
+    }
+
     public Map<Long, UserContact> findUsersByIds(Collection<Long> userIds) {
         if (userIds == null || userIds.isEmpty()) {
             return Map.of();

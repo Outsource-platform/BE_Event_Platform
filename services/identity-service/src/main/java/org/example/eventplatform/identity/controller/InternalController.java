@@ -8,6 +8,7 @@ import org.example.eventplatform.identity.dto.internal.TenantSummaryResponse;
 import org.example.eventplatform.identity.dto.internal.UserContactResponse;
 import org.example.eventplatform.identity.entity.Tenant;
 import org.example.eventplatform.identity.entity.User;
+import org.example.eventplatform.identity.entity.UserStatus;
 import org.example.eventplatform.identity.repository.TenantRepository;
 import org.example.eventplatform.identity.repository.UserRepository;
 import org.springframework.http.ResponseEntity;
@@ -38,6 +39,15 @@ public class InternalController {
                 .map(this::toAdminContact)
                 .toList();
         return ResponseEntity.ok(admins);
+    }
+
+    /** Thành viên đang hoạt động của đoàn, để báo show mới cho cả đoàn. */
+    @GetMapping("/tenants/{tenantId}/members")
+    public ResponseEntity<List<Long>> getTenantMemberIds(@PathVariable Long tenantId) {
+        return ResponseEntity.ok(userRepository.findByTenantIdAndRoleName(tenantId, "TN_MEMBER").stream()
+                .filter(user -> user.getStatus() == UserStatus.ACTIVE)
+                .map(User::getId)
+                .toList());
     }
 
     /** Danh sách đoàn cho sàn khách hàng — chỉ đoàn đang hoạt động, chỉ trường công khai. */

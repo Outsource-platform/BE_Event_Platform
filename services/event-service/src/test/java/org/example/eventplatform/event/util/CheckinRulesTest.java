@@ -1,15 +1,19 @@
 package org.example.eventplatform.event.util;
 
+import org.example.eventplatform.event.entity.AssignStatus;
 import org.example.eventplatform.shared.exception.ApiException;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CheckinRulesTest {
 
@@ -21,6 +25,21 @@ class CheckinRulesTest {
 
     private static final LocalDate SHOW_DAY = LocalDate.of(2026, 10, 31);
     private static final LocalTime GATHER = LocalTime.of(6, 30);
+
+    @Test
+    void nguoiChuaPhanHoiKhongGiuShowOTrangThaiDangDien() {
+        assertTrue(CheckinRules.showFinished(List.of(AssignStatus.COMPLETED, AssignStatus.PENDING, AssignStatus.ACCEPTED)));
+    }
+
+    @Test
+    void conNguoiDangOShowThiChuaXong() {
+        assertFalse(CheckinRules.showFinished(List.of(AssignStatus.COMPLETED, AssignStatus.CHECKED_IN)));
+    }
+
+    @Test
+    void chuaAiCheckOutThiChuaXong() {
+        assertFalse(CheckinRules.showFinished(List.of(AssignStatus.ACCEPTED, AssignStatus.PENDING)));
+    }
 
     @Test
     void trongBanKinh500mThiChoQua() {

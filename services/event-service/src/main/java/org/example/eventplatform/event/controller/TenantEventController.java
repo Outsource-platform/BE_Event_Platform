@@ -140,6 +140,19 @@ public class TenantEventController {
         return ResponseEntity.ok("Đã phản hồi trạng thái show.");
     }
 
+    @GetMapping("/open-shows")
+    @PreAuthorize("hasRole('TN_MEMBER')")
+    public ResponseEntity<List<OpenShowResponse>> listOpenShows(@AuthenticationPrincipal JwtPrincipal principal) {
+        return ResponseEntity.ok(eventService.listOpenShows(principal));
+    }
+
+    @PostMapping("/{id}/claim")
+    @PreAuthorize("hasRole('TN_MEMBER')")
+    public ResponseEntity<String> claimShow(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable Long id) {
+        eventService.claimShow(id, principal);
+        return ResponseEntity.ok("Đã nhận show");
+    }
+
     @PostMapping("/assignments/{userEventId}/concentrate-check-in")
     public ResponseEntity<String> concentrateCheckIn(
             @AuthenticationPrincipal JwtPrincipal principal,

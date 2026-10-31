@@ -51,6 +51,7 @@ public class EventResponse {
     private Double venueLat;
     private Double venueLng;
     private Integer checkinRadiusMeters;
+    private Integer memberLimit;
     private BigDecimal teamFundPercent;
     private BigDecimal teamFundAmount;
     private Long createdByUserId;
